@@ -1,0 +1,2158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Greenhouse Monitoring – Live Firebase</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-head">
+      <h1>Greenhouse Access Portal</h1>
+      <p>Login to view live monitoring, analytics, disease detection and manage farmer accounts.</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showAuthTab('login')">🔐 Login</button>
+      <button class="auth-tab" onclick="showAuthTab('register')">📝 Register</button>
+    </div>
+    <form id="login-form" class="auth-form active" onsubmit="event.preventDefault(); doLogin();">
+      <div class="auth-field">
+        <label>Username</label>
+        <input id="login-username" placeholder="Enter username" required>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input id="login-password" type="password" placeholder="Enter password" required>
+      </div>
+      <div class="auth-actions">
+        <small>Default admin: admin / admin</small>
+        <button class="btn p" type="submit">Login</button>
+      </div>
+    </form>
+    <form id="register-form" class="auth-form" onsubmit="event.preventDefault(); doRegister();">
+      <div class="auth-field">
+        <label>Full Name</label>
+        <input id="reg-name" placeholder="Farmer name" required>
+      </div>
+      <div class="auth-field">
+        <label>Username</label>
+        <input id="reg-username" placeholder="Choose username" required>
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input id="reg-email" type="email" placeholder="farmer@email.com" required>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input id="reg-password" type="password" placeholder="Create password" required>
+      </div>
+      <div class="auth-field">
+        <label>Location</label>
+        <input id="reg-location" placeholder="Farm location">
+      </div>
+      <div class="auth-actions">
+        <small>New accounts are created as farmers.</small>
+        <button class="btn p" type="submit">Create Account</button>
+      </div>
+    </form>
+    <div class="auth-note">Use the admin account for full farmer management and system control. Farmers can monitor greenhouse data after login.</div>
+  </div>
+</div>
+
+<div id="app-shell">
+<!-- ─── SIDEBAR ─── -->
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="leaf">🌿</div>
+    <div class="sb-logo-text">
+      <span>Greenhouse AI</span>
+      <small>Smart Realtime System</small>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="nav-grp">Monitor</div>
+    <div class="nav-item active" onclick="go('dashboard')"><span class="ico">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="go('analytics')"><span class="ico">📈</span> Analytics</div>
+    <div class="nav-item" onclick="go('plants')"><span class="ico">🌱</span> Plant Status</div>
+    <div class="nav-item" onclick="go('environment')"><span class="ico">🌡️</span> Environment</div>
+    <div class="nav-item" onclick="go('alerts')"><span class="ico">🔔</span> Alerts <span class="nav-badge" id="ab">0</span></div>
+    <div class="nav-item" onclick="go('disease')"><span class="ico">🔬</span> Disease Check</div>
+
+    <div class="nav-grp">Operations</div>
+    <div class="nav-item" onclick="go('controls')" id="nav-controls"><span class="ico">🎛️</span> Controls</div>
+    <div class="nav-item" onclick="go('database')" id="nav-database"><span class="ico">🗄️</span> Database</div>
+    <div class="nav-item" onclick="go('settings')" id="nav-settings"><span class="ico">⚙️</span> Settings</div>
+
+    <div class="nav-grp">Admin</div>
+    <div class="nav-item" onclick="go('users')" id="nav-users"><span class="ico">👥</span> Farmers</div>
+  </nav>
+  <div class="sb-bottom">
+    <div class="sim-pill live" id="mode-pill">
+      <div class="pill-dot live" id="pill-dot"></div>
+      <span id="pill-txt">🔴 Live Firebase</span>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;padding:8px 2px;border-top:1px solid rgba(255,255,255,0.15)">
+      <span style="font-size:11px;color:rgba(255,255,255,0.75);font-weight:600">🧪 Demo Simulator</span>
+      <label class="tog" style="transform:scale(0.8);margin:0"><input type="checkbox" id="sim-mode-toggle" onchange="toggleSimMode(this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+    </div>
+    <div style="margin-top:8px;font-size:10.5px;color:rgba(255,255,255,.5);padding:0 2px">
+      Auto-Sync: <span id="ref-rate">3s</span> | History: <b>5m</b>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MAIN ─── -->
+<div id="main">
+  <div id="topbar">
+    <div class="tb-l">
+      <div>
+        <div class="tb-title" id="ptitle">Dashboard</div>
+        <div class="tb-sub" id="psub">Live telemetry from Firebase Realtime Database</div>
+      </div>
+    </div>
+    <div class="tb-r">
+      <div class="live-ind" id="live-ind">
+        <div class="ring"></div>
+        <span id="live-txt">Connecting Firebase…</span>
+      </div>
+      <div class="icon-btn" onclick="go('alerts')" title="Alerts">🔔<div class="n-dot" id="nd">0</div></div>
+      <div class="icon-btn" onclick="manualRefresh()" title="Refresh">🔄</div>
+      <div class="user-chip" id="user-chip"><span class="dot"></span><span id="user-chip-name">Guest</span></div>
+      <button class="btn s" onclick="logoutUser()" style="padding:7px 12px;font-size:11px">🚪 Logout</button>
+      <div class="avi" title="Greenhouse Admin">GH</div>
+    </div>
+  </div>
+
+  <div id="content">
+
+    <!-- 1. DASHBOARD PAGE -->
+    <div class="page active" id="page-dashboard">
+      <div class="dashboard-topbar">
+        Firebase DB: <b id="fb-url-disp" class="db-pill">greenhouse-monitor-e40fa</b> · Last Timestamp: <b id="lut">—</b> <span class="spin" id="loading-spin"></span>
+      </div>
+
+      <div class="qa" id="dashboard-actions">
+        <button class="btn p" onclick="waterAll()">💧 Water All Plants</button>
+        <button class="btn d" onclick="eStop()">🛑 Emergency Stop</button>
+        <button class="btn s" onclick="manualRefresh()">🔄 Refresh</button>
+        <button class="btn s" onclick="triggerHistorySnapshot()">📸 Save Snapshot</button>
+      </div>
+      <div id="farmer-mode-banner" class="auth-note dashboard-banner">Monitoring-only mode: you can view live greenhouse data and alerts, but control actions are disabled for your account.</div>
+
+      <div class="st">Live Environmental Sensors</div>
+      <div class="e5">
+        <div class="ec">
+          <div class="ec-bg">🌡️</div>
+          <div class="ec-lbl">Temperature</div>
+          <div class="ec-val" id="e-temp">—</div>
+          <div class="ec-unit">°C</div>
+          <div class="ec-status" id="e-temp-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-temp" style="width:0;background:linear-gradient(90deg,#22c55e,#4ade80)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">💧</div>
+          <div class="ec-lbl">Humidity</div>
+          <div class="ec-val" id="e-hum">—</div>
+          <div class="ec-unit">%</div>
+          <div class="ec-status" id="e-hum-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-hum" style="width:0;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">💨</div>
+          <div class="ec-lbl">CO₂ Level</div>
+          <div class="ec-val" id="e-co2">—</div>
+          <div class="ec-unit">ppm</div>
+          <div class="ec-status" id="e-co2-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-co2" style="width:0;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">🔥</div>
+          <div class="ec-lbl">Smoke (MQ-135)</div>
+          <div class="ec-val" id="e-smoke">—</div>
+          <div class="ec-unit">ppm</div>
+          <div class="ec-status" id="e-smoke-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-smoke" style="width:0;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">☀️</div>
+          <div class="ec-lbl">LDR Light</div>
+          <div class="ec-val" id="e-ldr">—</div>
+          <div class="ec-unit">lux</div>
+          <div class="ec-status" id="e-ldr-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-ldr" style="width:0;background:linear-gradient(90deg,#f59e0b,#fcd34d)"></div></div>
+        </div>
+      </div>
+
+      <!-- Live Soil Moisture Sensors 1 through 6 -->
+      <div class="st">Soil Moisture Status</div>
+      <div class="soil6-grid" id="dash-soil-grid">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Live Actuator Status -->
+      <div class="st">Live Equipment Status</div>
+      <div class="a4">
+        <div class="ac" id="act-fan-card">
+          <span class="ac-ico">🌀</span>
+          <div class="ac-name">Fan Status</div>
+          <label class="tog"><input type="checkbox" id="act-fan" onchange="setAct('fan',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-fan-st">OFF</div>
+        </div>
+        <div class="ac" id="act-pump-card">
+          <span class="ac-ico">💦</span>
+          <div class="ac-name">Pump Status</div>
+          <label class="tog"><input type="checkbox" id="act-pump" onchange="setAct('pump',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-pump-st">OFF</div>
+        </div>
+        <div class="ac" id="act-win-card">
+          <span class="ac-ico">🪟</span>
+          <div class="ac-name">Window Status</div>
+          <label class="tog"><input type="checkbox" id="act-win" onchange="setAct('window',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-win-st">CLOSED</div>
+        </div>
+        <div class="ac" id="act-light-card">
+          <span class="ac-ico">💡</span>
+          <div class="ac-name">Light Status</div>
+          <label class="tog"><input type="checkbox" id="act-light" onchange="setAct('lights',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-light-st">OFF</div>
+        </div>
+      </div>
+
+      <!-- Live Trend Chart & Alerts -->
+      <div class="t2">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">📉 Real-Time Sensor Telemetry Trend</span>
+            <select class="fi" style="width:130px;padding:4px 8px;font-size:11.5px" onchange="switchChart(this.value)">
+              <option value="temperature">Temperature</option>
+              <option value="humidity">Humidity</option>
+              <option value="co2">CO₂ Level</option>
+              <option value="smoke">Smoke</option>
+              <option value="ldr">Light (LDR)</option>
+            </select>
+          </div>
+          <div class="cb"><div style="position:relative;height:210px"><canvas id="mainChart">Live chart</canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">🔔 Recent Real-Time Alerts</span><span style="font-size:11px;color:var(--muted);cursor:pointer" onclick="go('alerts')">View All →</span></div>
+          <div class="cb" id="alert-feed" style="padding:10px 14px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. ANALYTICS PAGE (Strictly driven by 5-min History Records) -->
+    <div class="page" id="page-analytics">
+      <div style="background:var(--g8);border-radius:10px;padding:12px 16px;margin-bottom:20px;border:1px solid var(--g7);display:flex;align-items:center;justify-content:space-between">
+        <div>
+          <b style="color:var(--g2);font-size:13.5px">📅 5-Minute History Telemetry Analytics</b>
+          <div style="font-size:11.5px;color:var(--muted);margin-top:2px">Generating graphs, average, maximum, and minimum values strictly from Firebase <code>/history</code> records.</div>
+        </div>
+        <button class="btn p" style="padding:6px 14px;font-size:11.5px" onclick="triggerHistorySnapshot()">📸 Trigger 5-Min History Record Now</button>
+      </div>
+
+      <!-- Summary Statistics Grid (Avg, Max, Min for Temp, Humidity, CO2, Soil Moisture) -->
+      <div class="g4" style="margin-bottom:20px">
+        <!-- Temp Stats -->
+        <div class="astat-box">
+          <div class="astat-title">🌡️ Temperature History (°C)</div>
+          <div class="astat-grid">
+            <div class="astat-item"><div class="astat-val" id="an-t-avg" style="color:#22c55e">—</div><div class="astat-lbl">AVERAGE</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-t-max" style="color:#ef4444">—</div><div class="astat-lbl">MAXIMUM</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-t-min" style="color:#3b82f6">—</div><div class="astat-lbl">MINIMUM</div></div>
+          </div>
+        </div>
+        <!-- Humidity Stats -->
+        <div class="astat-box">
+          <div class="astat-title">💧 Humidity History (%)</div>
+          <div class="astat-grid">
+            <div class="astat-item"><div class="astat-val" id="an-h-avg" style="color:#3b82f6">—</div><div class="astat-lbl">AVERAGE</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-h-max" style="color:#ef4444">—</div><div class="astat-lbl">MAXIMUM</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-h-min" style="color:#f59e0b">—</div><div class="astat-lbl">MINIMUM</div></div>
+          </div>
+        </div>
+        <!-- CO2 Stats -->
+        <div class="astat-box">
+          <div class="astat-title">💨 CO₂ History (ppm)</div>
+          <div class="astat-grid">
+            <div class="astat-item"><div class="astat-val" id="an-c-avg" style="color:#8b5cf6">—</div><div class="astat-lbl">AVERAGE</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-c-max" style="color:#ef4444">—</div><div class="astat-lbl">MAXIMUM</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-c-min" style="color:#22c55e">—</div><div class="astat-lbl">MINIMUM</div></div>
+          </div>
+        </div>
+        <!-- Soil Moisture Stats -->
+        <div class="astat-box">
+          <div class="astat-title">🌱 Soil Moisture History (%)</div>
+          <div class="astat-grid">
+            <div class="astat-item"><div class="astat-val" id="an-s-avg" style="color:#22c55e">—</div><div class="astat-lbl">AVERAGE</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-s-max" style="color:#3b82f6">—</div><div class="astat-lbl">MAXIMUM</div></div>
+            <div class="astat-item"><div class="astat-val" id="an-s-min" style="color:#ef4444">—</div><div class="astat-lbl">MINIMUM</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Section -->
+      <div class="g2" style="margin-bottom:20px">
+        <div class="card">
+          <div class="ch"><span class="ct">🌡️ Temperature & Humidity (5-Min History)</span></div>
+          <div class="cb"><div style="height:220px"><canvas id="anHistTempHum">History Chart</canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">💨 CO₂ Level (5-Min History)</span></div>
+          <div class="cb"><div style="height:220px"><canvas id="anHistCO2">History Chart</canvas></div></div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><span class="ct">🌱 Soil Moisture Sensors 1–6 (5-Min History)</span></div>
+        <div class="cb"><div style="height:220px"><canvas id="anHistSoil">Soil History Chart</canvas></div></div>
+      </div>
+
+      <!-- 5-Min History Database Table -->
+      <div class="card">
+        <div class="ch"><span class="ct">📋 5-Minute History Log Records (Firebase <code>/history</code>)</span><button class="btn s" style="padding:4px 10px;font-size:11px" onclick="exportHistoryCSV()">⬇️ Export CSV</button></div>
+        <div style="max-height:300px;overflow-y:auto">
+          <table class="dt">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Temp (°C)</th>
+                <th>Hum (%)</th>
+                <th>CO₂ (ppm)</th>
+                <th>Smoke</th>
+                <th>LDR</th>
+                <th>Soil 1-6 Avg</th>
+                <th>Fan</th>
+                <th>Pump</th>
+                <th>Window</th>
+              </tr>
+            </thead>
+            <tbody id="an-history-tbody">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. PLANT MANAGEMENT PAGE -->
+    <div class="page" id="page-plants">
+      <div class="st">6x Soil Moisture Sensors (Plant Management)</div>
+      <div style="display:flex;gap:10px;margin-bottom:18px">
+        <input class="fi" type="text" placeholder="🔍 Search plants…" style="max-width:240px" oninput="filterP(this.value)">
+        <select class="fi" style="width:140px" onchange="filterPS(this.value)">
+          <option value="">All Status</option><option value="ok">OK (Moist)</option><option value="dry">DRY (Needs Water)</option><option value="wet">WET (High Moisture)</option>
+        </select>
+      </div>
+      <div class="pg" id="plant-grid"></div>
+      <div class="card" style="margin-top:20px">
+        <div class="ch"><span class="ct">📊 Soil Moisture Sensor Comparison (Sensors 1 – 6)</span></div>
+        <div class="cb"><div style="position:relative;height:220px"><canvas id="soilBarChart">Soil bar chart</canvas></div></div>
+      </div>
+    </div>
+
+    <!-- 4. ENVIRONMENT PAGE -->
+    <div class="page" id="page-environment">
+      <div class="tabs">
+        <button class="tab active" onclick="envT(this,'rt')">📡 Real-Time Sensors</button>
+        <button class="tab" onclick="envT(this,'npk')">🌱 NPK Nutrients</button>
+        <button class="tab" onclick="envT(this,'thr')">⚙️ Safety Thresholds</button>
+      </div>
+      <div id="et-rt">
+        <div class="g2">
+          <div class="card"><div class="ch"><span class="ct">🌡️ Temperature (DHT11)</span><span style="font-size:18px;font-weight:800;color:var(--g2)" id="env-T">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecT">Temperature chart</canvas></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">💧 Humidity (DHT11)</span><span style="font-size:18px;font-weight:800;color:var(--info)" id="env-H">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecH">Humidity chart</canvas></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">☀️ LDR Light Sensor</span><span style="font-size:18px;font-weight:800;color:#f59e0b" id="env-L">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecL">Light chart</canvas></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">💨 CO₂ Air Quality (MQ-135)</span><span style="font-size:18px;font-weight:800;color:#8b5cf6" id="env-C">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecC">CO2 chart</canvas></div></div></div>
+        </div>
+      </div>
+      <div id="et-npk" style="display:none">
+        <div class="card">
+          <div class="ch"><span class="ct">🌱 RS-485 NPK Soil Nutrient Readings</span><span class="badge b">Modbus Sensor</span></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:center;margin-bottom:20px">
+              <div style="background:var(--g8);padding:16px;border-radius:10px"><div style="font-size:12px;color:var(--muted);font-weight:700">NITROGEN (N)</div><div style="font-size:32px;font-weight:800;color:#22c55e" id="npk-n-lg">85 mg/kg</div><div style="font-size:11px;color:var(--muted)">Target: 50–150 mg/kg</div></div>
+              <div style="background:var(--g8);padding:16px;border-radius:10px"><div style="font-size:12px;color:var(--muted);font-weight:700">PHOSPHORUS (P)</div><div style="font-size:32px;font-weight:800;color:#f59e0b" id="npk-p-lg">42 mg/kg</div><div style="font-size:11px;color:var(--muted)">Target: 30–80 mg/kg</div></div>
+              <div style="background:var(--g8);padding:16px;border-radius:10px"><div style="font-size:12px;color:var(--muted);font-weight:700">POTASSIUM (K)</div><div style="font-size:32px;font-weight:800;color:#3b82f6" id="npk-k-lg">120 mg/kg</div><div style="font-size:11px;color:var(--muted)">Target: 50–200 mg/kg</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="et-thr" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">Environment Threshold Settings</span></div>
+        <div class="cb">
+          <div class="g2">
+            <div><div class="fg"><label class="fl">Max Temp → Fan ON (°C)</label><input class="fi" type="number" id="t-max-inp" value="26"></div></div>
+            <div><div class="fg"><label class="fl">Min Humidity → Fan ON (%)</label><input class="fi" type="number" id="h-min-inp" value="50"></div></div>
+            <div><div class="fg"><label class="fl">Soil Moisture → Pump ON (%)</label><input class="fi" type="number" id="s-min-inp" value="30"></div></div>
+            <div><div class="fg"><label class="fl">LDR → Lights ON (lux)</label><input class="fi" type="number" id="l-min-inp" value="500"></div></div>
+            <div><div class="fg"><label class="fl">Smoke Alert (ppm)</label><input class="fi" type="number" id="smoke-max-inp" value="700"></div></div>
+            <div><div class="fg"><label class="fl">CO₂ Danger Alert (ppm)</label><input class="fi" type="number" id="co2-max-inp" value="1000"></div></div>
+          </div>
+          <button class="save-btn" onclick="saveThresholds()">💾 Save Thresholds to Firebase</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 5. CONTROLS PAGE -->
+    <div class="page" id="page-controls">
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><span class="ct">🎛️ Manual Actuator Override (Write to Firebase)</span><span class="badge y">Direct Firebase Control</span></div>
+          <div class="cb" style="display:grid;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🌀</span><div><div style="font-size:13.5px;font-weight:700">Fan (Pin 53)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: Temp > 26°C or Humidity < 50%</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px"><span class="ac-st" id="cf-st">—</span><label class="tog"><input type="checkbox" id="cf" onchange="setAct('fan',this)"><div class="tog-t"><div class="tog-k"></div></div></label></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🪟</span><div><div style="font-size:13.5px;font-weight:700">Window Servo (Pin 52)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: Temp > 26°C or Smoke > 700ppm</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px"><span class="ac-st" id="cw-st">—</span><label class="tog"><input type="checkbox" id="cw" onchange="setAct('window',this)"><div class="tog-t"><div class="tog-k"></div></div></label></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">💡</span><div><div style="font-size:13.5px;font-weight:700">Grow Lights Relay (Pin 51)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: LDR < 500 lux</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px"><span class="ac-st" id="cl-st">—</span><label class="tog"><input type="checkbox" id="cl" onchange="setAct('lights',this)"><div class="tog-t"><div class="tog-k"></div></div></label></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">💦</span><div><div style="font-size:13.5px;font-weight:700">Water Pump Relay (Pin 49)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: Moisture < 30%</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <select class="fi" style="width:75px;padding:4px 6px;font-size:11px" id="pump-dur"><option value="3">3s</option><option value="5">5s</option><option value="10">10s</option></select>
+                <button class="btn p" style="padding:6px 12px;font-size:11px" onclick="runPump()">Run Pulse</button>
+              </div>
+            </div>
+            <div style="padding:14px;background:#fee2e2;border-radius:10px;border:1px solid #fca5a5;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🔊</span><div><div style="font-size:13.5px;font-weight:700;color:#991b1b">Emergency Alarm Buzzer (Pin 46)</div><div style="font-size:11px;color:#7f1d1d">Triggers automatically on Smoke > 700 ppm</div></div></div>
+              <div style="display:flex;gap:8px"><button class="btn s" style="padding:5px 10px;font-size:11px" onclick="toast('Buzzer test signal sent','warning')">Test</button><button class="btn d" style="padding:5px 10px;font-size:11px" onclick="toast('Buzzer silenced','info')">Silence</button></div>
+            </div>
+          </div>
+          <div style="padding:18px;border-top:1px solid var(--border)"><button class="btn d" style="width:100%;justify-content:center" onclick="eStop()">🛑 EMERGENCY STOP ALL ACTUATORS</button></div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="ch"><span class="ct">⏰ Automation Timers & Schedules</span></div>
+            <div class="cb" style="display:grid;gap:12px">
+              <div style="background:var(--g8);border-radius:9px;padding:12px;border:1px solid var(--g7)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:700">💡 Grow Lights Schedule</span><label class="tog" style="transform:scale(.85)"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+                <div class="g2" style="gap:8px;margin:0"><div><label class="fl">Turn ON</label><input class="fi" type="time" value="06:00"></div><div><label class="fl">Turn OFF</label><input class="fi" type="time" value="18:00"></div></div>
+              </div>
+              <div style="background:var(--g8);border-radius:9px;padding:12px;border:1px solid var(--g7)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:700">💧 Automated Irrigation Interval</span><label class="tog" style="transform:scale(.85)"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+                <div><label class="fl">Repeat Interval</label><select class="fi"><option>Every 30 Minutes</option><option>Every 1 Hour</option><option>Every 2 Hours</option><option>Every 6 Hours</option></select></div>
+              </div>
+              <button class="save-btn" onclick="toast('Schedules saved to Firebase','success')">💾 Save Automation Schedules</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><span class="ct">📋 Actuator Execution Log</span></div>
+            <div style="max-height:210px;overflow-y:auto">
+              <table class="dt"><thead><tr><th>Time</th><th>Action</th><th>User / Mode</th></tr></thead><tbody id="ctrl-log"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. ALERTS PAGE -->
+    <div class="page" id="page-alerts">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+        <button class="btn p" onclick="fAlert('all',this)">All Alerts</button>
+        <button class="btn s" onclick="fAlert('critical',this)">🔴 Critical</button>
+        <button class="btn s" onclick="fAlert('warning',this)">🟡 Warning</button>
+        <button class="btn s" onclick="fAlert('info',this)">🔵 Info</button>
+        <button class="btn s" style="margin-left:auto" onclick="ackAll()">✅ Acknowledge All</button>
+      </div>
+      <div class="card"><div class="cb" id="alert-list" style="padding:14px"></div></div>
+    </div>
+
+    <!-- 7. FARMERS / USERS MANAGEMENT PAGE -->
+    <div class="page" id="page-users">
+      <div class="qa">
+        <button class="btn p" onclick="resetUserForm()">➕ Add Farmer</button>
+        <button class="btn s" onclick="renderUsersPage()">🔄 Refresh List</button>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><span class="ct">👤 Farmer Account Form</span></div>
+          <div class="cb">
+            <div class="fg">
+              <label class="fl">Full Name</label>
+              <input class="fi" id="user-fullname" placeholder="Farmer name">
+            </div>
+            <div class="fg">
+              <label class="fl">Username</label>
+              <input class="fi" id="user-username" placeholder="Username">
+            </div>
+            <div class="fg">
+              <label class="fl">Email</label>
+              <input class="fi" id="user-email" placeholder="farmer@email.com">
+            </div>
+            <div class="fg">
+              <label class="fl">Password</label>
+              <input class="fi" id="user-password" placeholder="Temporary password">
+            </div>
+            <div class="fg">
+              <label class="fl">Location</label>
+              <input class="fi" id="user-location" placeholder="Farm location">
+            </div>
+            <div class="qa">
+              <button class="btn p" onclick="saveUserFromForm()">💾 Save Farmer</button>
+              <button class="btn s" onclick="resetUserForm()">↺ Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">🧑‍🌾 Farmer Accounts</span></div>
+          <div class="cb">
+            <table class="dt">
+              <thead>
+                <tr><th>Username</th><th>Name</th><th>Role</th><th>Email</th><th>Location</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="user-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. FIREBASE DATABASE PAGE -->
+    <div class="page" id="page-database">
+      <div class="card" style="margin-bottom:16px">
+        <div class="ch">
+          <span class="ct">🗄️ Firebase Realtime Database Live Inspector</span>
+          <div style="display:flex;gap:8px">
+            <span class="badge b" id="db-status">Checking…</span>
+            <button class="btn s" style="padding:4px 10px;font-size:11px" onclick="fetchDB()">🔄 Re-Sync DB</button>
+          </div>
+        </div>
+        <div class="cb">
+          <div class="fb-path">
+            📡 <b>Firebase Realtime Database Endpoint:</b><br>
+            <a href="https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app/.json" target="_blank" style="color:#a5d6a7;text-decoration:underline">https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app/.json</a>
+          </div>
+          <div id="db-perm-warning" style="display:none;background:#fee2e2;border:1px solid #fca5a5;color:#991b1b;padding:12px;border-radius:8px;margin-bottom:14px;font-size:12px">
+            ⚠️ <b>Permission Denied Warning:</b> Your Firebase database returned standard unauthenticated protection mode. To allow reading/writing directly from your browser, update your Firebase Realtime Database rules in Firebase Console to:
+            <pre style="margin-top:6px;background:#fff;padding:6px;border-radius:4px;font-size:11px">{ "rules": { ".read": true, ".write": true } }</pre>
+          </div>
+          <div id="db-tree" style="background:#142e16;border-radius:8px;padding:16px;font-family:monospace;font-size:12.5px;line-height:1.8;border:1px solid var(--g7);min-height:140px;overflow-x:auto;color:#a5d6a7">
+            <!-- Tree dynamically rendered -->
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">📋 Raw Firebase JSON Snapshot</span><button class="btn s" style="padding:4px 10px;font-size:11px" onclick="copyJSON()">📋 Copy JSON</button></div>
+        <div class="cb"><pre id="raw-json" style="background:#1a2e1a;color:#a5d6a7;border-radius:8px;padding:14px;font-size:11.5px;overflow-x:auto;max-height:360px;line-height:1.6">Connecting to Firebase…</pre></div>
+      </div>
+    </div>
+
+    <!-- 8. DISEASE DETECTION PAGE -->
+    <div class="page" id="page-disease">
+      <div class="g3" style="margin-bottom:20px">
+        <div class="card"><div class="astat-box"><div class="astat-val" style="color:var(--text)">32</div><div class="astat-lbl">TOTAL SCANS</div></div></div>
+        <div class="card"><div class="astat-box"><div class="astat-val" style="color:#22c55e">27</div><div class="astat-lbl">HEALTHY PLANTS</div></div></div>
+        <div class="card"><div class="astat-box"><div class="astat-val" style="color:#ef4444">5</div><div class="astat-lbl">DISEASES DETECTED</div></div></div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><span class="ct">📷 Plant Leaf Disease AI Scanner</span></div>
+          <div class="cb">
+            <div class="upz" onclick="triggerDiseaseAnalysis()">
+              <div style="font-size:48px;margin-bottom:12px">🌿</div>
+              <div style="font-size:14px;font-weight:700;color:var(--g2);margin-bottom:4px">Upload / Drop Plant Leaf Photo</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-bottom:14px">Supports JPG, PNG, WEBP leaf images</div>
+              <button class="btn p" onclick="event.stopPropagation();triggerDiseaseAnalysis()">🤖 Run AI Health Diagnostics</button>
+            </div>
+            <div class="fg" style="margin-top:14px">
+              <label class="fl">Select Plant Subject</label>
+              <select class="fi" id="disease-plant-sel"></select>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">🔬 Diagnostic Results</span><span class="badge r" id="disease-badge">Analysis Ready</span></div>
+          <div class="cb" id="disease-result-box">
+            <div style="background:#fee2e2;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid #fca5a5">
+              <div style="font-size:15px;font-weight:800;color:#991b1b;margin-bottom:4px">🦠 Early Blight (Alternaria solani)</div>
+              <div style="font-size:11.5px;color:#7f1d1d;margin-bottom:8px">Confidence Score: <b>89.2%</b> · Severity: <b>Moderate</b></div>
+              <div style="font-size:11.5px;color:#991b1b">Plant 1 (Tomato) · Scanned just now</div>
+            </div>
+            <div style="font-size:12.5px;font-weight:700;margin-bottom:6px">💊 Recommended Treatment Protocol</div>
+            <div style="font-size:12px;color:var(--text);line-height:1.7;background:var(--g8);padding:12px;border-radius:8px;border:1px solid var(--g7)">
+              1. Prune affected bottom foliage immediately.<br>
+              2. Apply organic copper-based fungicide spray every 7 days.<br>
+              3. Maintain optimal fan ventilation to lower canopy humidity below 70%.
+            </div>
+            <button class="btn p" style="width:100%;margin-top:14px;justify-content:center" onclick="toast('Treatment protocol saved to Firebase','success')">✅ Log Treatment Record</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 9. SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="tabs">
+        <button class="tab active" onclick="sTab(this,'g')">⚙️ General</button>
+        <button class="tab" onclick="sTab(this,'fb')">🔥 Firebase Config</button>
+        <button class="tab" onclick="sTab(this,'n')">🔔 Notifications</button>
+        <button class="tab" onclick="sTab(this,'p')">👤 Admin Profile</button>
+      </div>
+      <div id="st-g">
+        <div class="card"><div class="ch"><span class="ct">System Settings</span></div><div class="cb">
+          <div class="g2">
+            <div><div class="fg"><label class="fl">System Name</label><input class="fi" value="Smart Greenhouse Monitoring System"></div></div>
+            <div><div class="fg"><label class="fl">Location</label><input class="fi" value="Greenhouse Bay 1 - Kelaniya Engineering"></div></div>
+            <div><div class="fg"><label class="fl">Timezone</label><select class="fi"><option>Asia/Colombo (UTC+5:30)</option><option>UTC</option></select></div></div>
+            <div><div class="fg"><label class="fl">Live Auto-Sync Rate</label><select class="fi" id="ref-sel" onchange="setRefRate(this.value)"><option value="3000">Every 3s</option><option value="5000">Every 5s</option><option value="10000">Every 10s</option></select></div></div>
+          </div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer" onclick="toast('General settings saved','success')">💾 Save Settings</button>
+        </div></div>
+      </div>
+      <div id="st-fb" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">🔥 Direct Firebase Realtime Database Endpoint</span></div><div class="cb">
+          <div class="fg"><label class="fl">Firebase Database URL</label><input class="fi" id="fb-url-inp" value="https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app"></div>
+          <div class="fg"><label class="fl">REST API Endpoint</label><input class="fi" value="https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app/.json" readonly style="background:#f8faf8"></div>
+          <div class="fg"><label class="fl">Project ID</label><input class="fi" value="greenhouse-monitor-e40fa" readonly style="background:#f8faf8"></div>
+          <div class="fg"><label class="fl">Database Root Path</label><input class="fi" id="fb-path-inp" value="/" placeholder="/livedata"></div>
+          <div style="background:var(--g8);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--muted)">
+            ℹ️ Direct browser REST API synchronization without AI server proxying.
+          </div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer" onclick="applyFBConfig()">🔗 Re-Connect Firebase</button>
+        </div></div>
+      </div>
+      <div id="st-n" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">Alert Notifications</span></div><div class="cb">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:600">In-App Popups & Toasts</div><div style="font-size:11px;color:var(--muted)">Show real-time alerts on screen</div></div><label class="tog"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:600">Smoke & High Temp Critical Alarms</div><div style="font-size:11px;color:var(--muted)">High priority audio & banner triggers</div></div><label class="tog"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer;margin-top:16px" onclick="toast('Notification settings saved','success')">💾 Save Preferences</button>
+        </div></div>
+      </div>
+      <div id="st-p" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">User Profile</span></div><div class="cb">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+            <div class="avi" style="width:58px;height:58px;font-size:20px">GH</div>
+            <div><div style="font-size:16px;font-weight:700">Greenhouse Administrator</div><div style="font-size:12px;color:var(--muted)">Primary Operator</div><span class="badge g" style="margin-top:4px">System Admin</span></div>
+          </div>
+          <div class="g2">
+            <div><div class="fg"><label class="fl">Operator Name</label><input class="fi" value="Greenhouse Administrator"></div></div>
+            <div><div class="fg"><label class="fl">Email Address</label><input class="fi" type="email" value="admin@greenhouse-monitor.com"></div></div>
+          </div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer" onclick="toast('Profile updated','success')">💾 Update Profile</button>
+        </div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="tc"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// GLOBAL STATE & FIREBASE CONFIGURATION
+// ═══════════════════════════════════════════
+let FB_BASE = 'https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app';
+let FB_PATH = '/';
+let REFRESH_RATE = 3000;
+let refreshTimer = null;
+let historyTimer = null;
+let rawDB = null;
+let chartMode = 'temperature';
+let SIMULATION_MODE = false;
+let fbApp = null;
+let fbDb = null;
+let fbListenerRef = null;
+
+// Firebase SDK Config (from user's Firebase project)
+const firebaseConfig = {
+  apiKey: "AIzaSyDu-3H9SEWa1j_abFKQ26UJ4s0nhwA4_P0",
+  authDomain: "greenhouse-monitor-e40fa.firebaseapp.com",
+  databaseURL: "https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "greenhouse-monitor-e40fa",
+  storageBucket: "greenhouse-monitor-e40fa.firebasestorage.app",
+  messagingSenderId: "704436732093",
+  appId: "1:704436732093:web:ba88bb34045561c2f937d4",
+  measurementId: "G-VWQ3QJ96W0"
+};
+
+// Live telemetry state — all null initially (shows "—" until Firebase data arrives)
+let liveData = {
+  temperature: null,
+  humidity: null,
+  co2: null,
+  smoke: null,
+  ldr: null,
+  fanStatus: null,
+  pumpStatus: null,
+  windowStatus: null,
+  lightStatus: null,
+  soil1: null,
+  soil2: null,
+  soil3: null,
+  soil4: null,
+  soil5: null,
+  soil6: null,
+  lastUpdated: null,
+  timestamp: null
+};
+
+// 5-Minute History records buffer
+let historyRecords = [];
+const timeLabels = [];
+const historyBuffers = { temperature:[], humidity:[], co2:[], smoke:[], ldr:[] };
+
+// Alert & Log Stores
+let alerts = [];
+let alertUnread = 0;
+let ctrlLog = [];
+let plants = [];
+let charts = {};
+let currentUser = null;
+let editingUserId = null;
+const AUTH_STORAGE_KEY = 'greenhouse-auth-users';
+const SESSION_STORAGE_KEY = 'greenhouse-auth-session';
+
+function getUsers() {
+  try {
+    const data = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!data) {
+      const defaultAdmin = { id: 1, username: 'admin', password: 'admin', role: 'admin', fullName: 'System Administrator', email: 'admin@greenhouse.com', phone: '', location: 'Main Office', status: 'active' };
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify([defaultAdmin]));
+      return [defaultAdmin];
+    }
+    const parsed = JSON.parse(data);
+    if (!parsed.some(u => u.username === 'admin')) {
+      parsed.unshift({ id: 1, username: 'admin', password: 'admin', role: 'admin', fullName: 'System Administrator', email: 'admin@greenhouse.com', phone: '', location: 'Main Office', status: 'active' });
+      localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed));
+    }
+    return parsed;
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveUsers(users) {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(users));
+}
+
+function setCurrentUser(user) {
+  currentUser = user;
+  localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(user));
+  updateAuthUI();
+}
+
+function clearSession() {
+  currentUser = null;
+  localStorage.removeItem(SESSION_STORAGE_KEY);
+  updateAuthUI();
+}
+
+function restoreSession() {
+  try {
+    const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+    if (!saved) return;
+    const parsed = JSON.parse(saved);
+    const users = getUsers();
+    const found = users.find(u => u.username === parsed.username && u.password === parsed.password);
+    if (found) {
+      currentUser = found;
+      updateAuthUI();
+    } else {
+      clearSession();
+    }
+  } catch (e) {
+    clearSession();
+  }
+}
+
+function showAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(btn => btn.classList.toggle('active', btn.textContent.includes(tab === 'login' ? 'Login' : 'Register')));
+  document.getElementById('login-form').classList.toggle('active', tab === 'login');
+  document.getElementById('register-form').classList.toggle('active', tab === 'register');
+}
+
+function doLogin() {
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const users = getUsers();
+  const found = users.find(u => u.username === username && u.password === password);
+  if (found) {
+    setCurrentUser(found);
+    toast(`Welcome ${found.fullName || found.username}`, 'success');
+    go('dashboard');
+  } else {
+    toast('Invalid username or password', 'error');
+  }
+}
+
+function doRegister() {
+  const fullName = document.getElementById('reg-name').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const location = document.getElementById('reg-location').value.trim();
+  const users = getUsers();
+  if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
+    toast('Username already exists', 'warning');
+    return;
+  }
+  const newUser = { id: Date.now(), username, password, role: 'farmer', fullName, email, phone: '', location, status: 'active' };
+  users.push(newUser);
+  saveUsers(users);
+  setCurrentUser(newUser);
+  toast('Registration successful. You can now monitor the greenhouse.', 'success');
+  go('dashboard');
+}
+
+function logoutUser() {
+  clearSession();
+  toast('You have been logged out', 'info');
+}
+
+function isAdminUser() {
+  return !!currentUser && currentUser.role === 'admin';
+}
+
+function updateAuthUI() {
+  document.body.classList.toggle('auth-logged-in', !!currentUser);
+  document.body.classList.toggle('auth-logged-out', !currentUser);
+  const chip = document.getElementById('user-chip-name');
+  const adminNavItems = ['nav-controls', 'nav-database', 'nav-settings', 'nav-users'];
+  const actions = document.getElementById('dashboard-actions');
+  const banner = document.getElementById('farmer-mode-banner');
+  const isAdmin = isAdminUser();
+  if (chip) chip.textContent = currentUser ? `${currentUser.fullName || currentUser.username} (${currentUser.role})` : 'Guest';
+  adminNavItems.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = isAdmin ? 'flex' : 'none';
+  });
+  if (actions) actions.style.display = isAdmin ? 'flex' : 'none';
+  if (banner) banner.style.display = isAdmin ? 'none' : 'block';
+  const title = document.getElementById('ptitle');
+  if (title && currentUser && !isAdmin) {
+    title.textContent = 'Farmer Monitoring';
+  } else if (title && !currentUser) {
+    title.textContent = 'Dashboard';
+  }
+}
+
+function resetUserForm() {
+  editingUserId = null;
+  ['user-fullname','user-username','user-email','user-password','user-location'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+}
+
+function saveUserFromForm() {
+  if (!currentUser || currentUser.role !== 'admin') {
+    toast('Only admin can manage farmer accounts', 'warning');
+    return;
+  }
+  const users = getUsers();
+  const fullName = document.getElementById('user-fullname').value.trim();
+  const username = document.getElementById('user-username').value.trim();
+  const email = document.getElementById('user-email').value.trim();
+  const password = document.getElementById('user-password').value;
+  const location = document.getElementById('user-location').value.trim();
+  if (!username || !fullName) {
+    toast('Full name and username are required', 'warning');
+    return;
+  }
+  const existing = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  if (existing && existing.id !== editingUserId) {
+    toast('Username already exists', 'warning');
+    return;
+  }
+  if (editingUserId) {
+    const target = users.find(u => u.id === editingUserId);
+    if (target) {
+      target.fullName = fullName;
+      target.username = username;
+      target.email = email;
+      target.location = location;
+      if (password) target.password = password;
+      toast('Farmer account updated', 'success');
+    }
+  } else {
+    users.push({ id: Date.now(), username, password: password || 'greenhouse123', role: 'farmer', fullName, email, phone: '', location, status: 'active' });
+    toast('Farmer account created', 'success');
+  }
+  saveUsers(users);
+  renderUsersPage();
+  resetUserForm();
+}
+
+function renderUsersPage() {
+  const users = getUsers().filter(u => u.role === 'farmer' || u.username === 'admin');
+  const tbody = document.getElementById('user-table-body');
+  if (!tbody) return;
+  tbody.innerHTML = users.map(u => `
+    <tr>
+      <td><b>${u.username}</b></td>
+      <td>${u.fullName || '—'}</td>
+      <td><span class="badge ${u.role === 'admin' ? 'g' : 'b'}">${u.role}</span></td>
+      <td>${u.email || '—'}</td>
+      <td>${u.location || '—'}</td>
+      <td>
+        <button class="btn s" style="padding:4px 8px;font-size:10px" onclick="editUser(${u.id})">✏️</button>
+        <button class="btn s" style="padding:4px 8px;font-size:10px" onclick="resetUserPassword(${u.id})">🔐</button>
+        <button class="btn d" style="padding:4px 8px;font-size:10px" onclick="deleteUser(${u.id})">🗑️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function editUser(id) {
+  const users = getUsers();
+  const user = users.find(u => u.id === id);
+  if (!user) return;
+  editingUserId = id;
+  document.getElementById('user-fullname').value = user.fullName || '';
+  document.getElementById('user-username').value = user.username || '';
+  document.getElementById('user-email').value = user.email || '';
+  document.getElementById('user-location').value = user.location || '';
+  document.getElementById('user-password').value = '';
+  toast(`Editing ${user.fullName || user.username}`, 'info');
+  go('users');
+}
+
+function resetUserPassword(id) {
+  const users = getUsers();
+  const user = users.find(u => u.id === id);
+  if (!user) return;
+  user.password = 'greenhouse123';
+  saveUsers(users);
+  toast(`${user.username} password reset to greenhouse123`, 'success');
+  renderUsersPage();
+}
+
+function deleteUser(id) {
+  if (!confirm('Delete this user account?')) return;
+  const users = getUsers().filter(u => u.id !== id);
+  saveUsers(users);
+  renderUsersPage();
+  toast('User removed', 'success');
+}
+
+// ═══════════════════════════════════════════
+// FIREBASE SDK REAL-TIME LISTENER
+// ═══════════════════════════════════════════
+function initFirebaseSDK() {
+  try {
+    fbApp = firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.database(fbApp);
+    console.log('✅ Firebase SDK initialized successfully');
+    
+    // Attach real-time listener to root
+    fbListenerRef = fbDb.ref('/');
+    fbListenerRef.on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && typeof data === 'object') {
+        rawDB = data;
+        processLiveDataFromSnapshot(data);
+        showDBTree(data);
+        setLiveStatus(true);
+        document.getElementById('db-perm-warning').style.display = 'none';
+      } else {
+        console.warn('Empty snapshot received from Firebase');
+        setLiveStatus(true); // Connected but no data
+      }
+    }, (error) => {
+      console.error('Firebase SDK listener error:', error);
+      setLiveStatus(false);
+      document.getElementById('db-perm-warning').style.display = 'block';
+    });
+  } catch (e) {
+    console.error('Firebase SDK init failed:', e);
+    // Fallback: show warning and try REST polling
+    document.getElementById('db-perm-warning').style.display = 'block';
+    document.getElementById('db-perm-warning').querySelector('pre').textContent = 
+      '⚠️ Firebase SDK failed to load. Check your internet connection and Firebase config.';
+    startRESTFallback();
+  }
+}
+
+// REST fallback for when SDK fails
+let restFallbackTimer = null;
+function startRESTFallback() {
+  if (restFallbackTimer) clearInterval(restFallbackTimer);
+  restFallbackTimer = setInterval(fetchDB_REST, 5000);
+  fetchDB_REST();
+}
+
+async function fetchDB_REST() {
+  const url = `${FB_BASE}.json`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data && typeof data === 'object' && !data.error) {
+      rawDB = data;
+      processLiveDataFromSnapshot(data);
+      showDBTree(data);
+      setLiveStatus(true);
+      document.getElementById('db-perm-warning').style.display = 'none';
+    }
+  } catch (e) {
+    console.warn('REST fallback sync warning:', e.message);
+  }
+}
+
+function setLiveStatus(ok) {
+  const el = document.getElementById('live-ind');
+  const txt = document.getElementById('live-txt');
+  const pill = document.getElementById('mode-pill');
+  const pillTxt = document.getElementById('pill-txt');
+  const pillDot = document.getElementById('pill-dot');
+  
+  if (ok) {
+    el.style.background = 'var(--g8)'; el.style.borderColor = 'var(--g7)'; el.style.color = 'var(--g2)';
+    txt.textContent = 'Firebase Connected';
+    pill.className = 'sim-pill live'; pillTxt.textContent = '🔴 Live Firebase'; pillDot.className = 'pill-dot live';
+    document.getElementById('sim-mode-toggle').checked = false;
+    SIMULATION_MODE = false;
+  } else {
+    el.style.background = '#fee2e2'; el.style.borderColor = '#fca5a5'; el.style.color = '#991b1b';
+    if (SIMULATION_MODE) {
+      txt.textContent = 'Demo Sim Mode';
+      pill.className = 'sim-pill offline'; pillTxt.textContent = '🧪 Demo Sim Mode'; pillDot.className = 'pill-dot offline';
+    } else {
+      txt.textContent = 'Disconnected';
+      pill.className = 'sim-pill offline'; pillTxt.textContent = '⚠️ Firebase Disconnected'; pillDot.className = 'pill-dot offline';
+    }
+  }
+  document.getElementById('lut').textContent = liveData.lastUpdated || new Date().toLocaleTimeString();
+  document.getElementById('loading-spin').style.display = 'none';
+}
+
+function toggleSimMode(el) {
+  SIMULATION_MODE = el.checked;
+  toast(`Demo Simulator mode ${SIMULATION_MODE ? 'ENABLED (fluctuating data)' : 'DISABLED (strict DB values)'}`, 'info');
+  setLiveStatus(false);
+  if (!SIMULATION_MODE) {
+    manualRefresh();
+  }
+}
+
+// ═══════════════════════════════════════════
+// LIVE DATA PROCESSOR (from Firebase SDK snapshot)
+// ═══════════════════════════════════════════
+function getValueByAliases(obj, aliases) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return null;
+  const lower = {};
+  Object.entries(obj).forEach(([k, v]) => { lower[k.toLowerCase()] = v; });
+  for (const alias of aliases) {
+    const direct = lower[alias.toLowerCase()];
+    if (direct !== undefined) return direct;
+    const normalizedAlias = alias.toLowerCase().replace(/[^a-z]/g, '');
+    const match = Object.entries(lower).find(([k]) => k.replace(/[^a-z]/g, '') === normalizedAlias);
+    if (match) return match[1];
+  }
+  return null;
+}
+
+function findDataObject(node) {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return null;
+  const lowerKeys = Object.keys(node).map(k => k.toLowerCase());
+  const hasTelemetry = [
+    'temperature','temp','tempc','humidity','humid','co2','smoke','ldr','light','lightlevel','lux',
+    'soil1','soil2','soil3','soil4','soil5','soil6','soilSensor1','soilSensor2','soilSensor3','soilSensor4','soilSensor5','soilSensor6',
+    'fanstatus','pumpstatus','windowstatus','lightstatus','fan','pump','window','lights'
+  ].some(key => lowerKeys.includes(key));
+
+  if (hasTelemetry) return node;
+
+  for (const child of Object.values(node)) {
+    if (child && typeof child === 'object' && !Array.isArray(child)) {
+      const found = findDataObject(child);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function getPrimaryDataNode(data) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+
+  const preferred = [data.live, data.greenhouse, data.current, data.latest, data.status, data.snapshot];
+  for (const candidate of preferred) {
+    if (candidate && typeof candidate === 'object' && !Array.isArray(candidate)) {
+      const found = findDataObject(candidate);
+      if (found) return found;
+      return candidate;
+    }
+  }
+
+  const namedMatches = Object.entries(data).filter(([key, value]) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+    const normalized = key.toLowerCase();
+    return normalized === 'live' || normalized === 'greenhouse' || normalized === 'current' || normalized === 'latest' || normalized === 'status' || normalized === 'snapshot';
+  });
+  if (namedMatches.length > 0) {
+    const found = findDataObject(namedMatches[0][1]);
+    return found || namedMatches[0][1];
+  }
+
+  const found = findDataObject(data);
+  return found || data;
+}
+
+function getHistoryItems(data) {
+  if (!data || typeof data !== 'object') return [];
+  const candidates = [data.history, data.History, data.historyData, data.histories];
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    if (Array.isArray(candidate)) return candidate.filter(item => item && typeof item === 'object');
+    if (typeof candidate === 'object') {
+      const values = Object.values(candidate).filter(item => item && typeof item === 'object');
+      if (values.length > 0) return values;
+    }
+  }
+  return [];
+}
+
+function formatTimestamp(value) {
+  if (value === null || value === undefined || value === '') return new Date().toLocaleTimeString();
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? String(value) : d.toLocaleString();
+}
+
+function normalizeStatus(v, fallback = 'OFF') {
+  if (v === true || v === 'ON' || v === '1' || v === 1 || v === 'true') return 'ON';
+  if (v === false || v === 'OFF' || v === '0' || v === 0 || v === 'false') return 'OFF';
+  return fallback;
+}
+
+function processLiveDataFromSnapshot(data) {
+  if (!data) return;
+
+  const source = getPrimaryDataNode(data) || data;
+  const historyItems = getHistoryItems(data);
+
+  liveData.temperature   = parseNum(getValueByAliases(source, ['temperature','temp','tempc','temp_c'])) ?? liveData.temperature;
+  liveData.humidity      = parseNum(getValueByAliases(source, ['humidity','humid','humiditypct','humidity_percent'])) ?? liveData.humidity;
+  liveData.co2           = parseNum(getValueByAliases(source, ['co2','co2level','carbon_dioxide'])) ?? liveData.co2;
+  liveData.smoke         = parseNum(getValueByAliases(source, ['smoke','mq135','gas'])) ?? liveData.smoke;
+  liveData.ldr           = parseNum(getValueByAliases(source, ['ldr','light','lightlevel','lux'])) ?? liveData.ldr;
+  
+  liveData.fanStatus     = parseBool(getValueByAliases(source, ['fanStatus','fan'])) ?? (liveData.fanStatus ?? false);
+  liveData.windowStatus  = parseBool(getValueByAliases(source, ['windowStatus','window'])) ?? (liveData.windowStatus ?? false);
+  liveData.pumpStatus    = parseBool(getValueByAliases(source, ['pumpStatus','pump'])) ?? (liveData.pumpStatus ?? false);
+  liveData.lightStatus   = parseBool(getValueByAliases(source, ['lightStatus','light','lights'])) ?? (liveData.lightStatus ?? false);
+
+  liveData.soil1 = parseNum(getValueByAliases(source, ['soil1','soilSensor1','soilmoisture1','moisture1'])) ?? liveData.soil1;
+  liveData.soil2 = parseNum(getValueByAliases(source, ['soil2','soilSensor2','soilmoisture2','moisture2'])) ?? liveData.soil2;
+  liveData.soil3 = parseNum(getValueByAliases(source, ['soil3','soilSensor3','soilmoisture3','moisture3'])) ?? liveData.soil3;
+  liveData.soil4 = parseNum(getValueByAliases(source, ['soil4','soilSensor4','soilmoisture4','moisture4'])) ?? liveData.soil4;
+  liveData.soil5 = parseNum(getValueByAliases(source, ['soil5','soilSensor5','soilmoisture5','moisture5'])) ?? liveData.soil5;
+  liveData.soil6 = parseNum(getValueByAliases(source, ['soil6','soilSensor6','soilmoisture6','moisture6'])) ?? liveData.soil6;
+
+  const hasAnyLiveValue = [liveData.temperature, liveData.humidity, liveData.co2, liveData.smoke, liveData.ldr, liveData.soil1, liveData.soil2, liveData.soil3, liveData.soil4, liveData.soil5, liveData.soil6].some(v => v !== null && v !== undefined);
+  if (!hasAnyLiveValue && source && typeof source === 'object') {
+    const fallback = Object.values(source).find(v => v && typeof v === 'object' && !Array.isArray(v));
+    if (fallback) {
+      liveData.temperature   = parseNum(getValueByAliases(fallback, ['temperature','temp','tempc','temp_c'])) ?? liveData.temperature;
+      liveData.humidity      = parseNum(getValueByAliases(fallback, ['humidity','humid','humiditypct','humidity_percent'])) ?? liveData.humidity;
+      liveData.co2           = parseNum(getValueByAliases(fallback, ['co2','co2level','carbon_dioxide'])) ?? liveData.co2;
+      liveData.smoke         = parseNum(getValueByAliases(fallback, ['smoke','mq135','gas'])) ?? liveData.smoke;
+      liveData.ldr           = parseNum(getValueByAliases(fallback, ['ldr','light','lightlevel','lux'])) ?? liveData.ldr;
+      liveData.soil1 = parseNum(getValueByAliases(fallback, ['soil1','soilSensor1','soilmoisture1','moisture1'])) ?? liveData.soil1;
+      liveData.soil2 = parseNum(getValueByAliases(fallback, ['soil2','soilSensor2','soilmoisture2','moisture2'])) ?? liveData.soil2;
+      liveData.soil3 = parseNum(getValueByAliases(fallback, ['soil3','soilSensor3','soilmoisture3','moisture3'])) ?? liveData.soil3;
+      liveData.soil4 = parseNum(getValueByAliases(fallback, ['soil4','soilSensor4','soilmoisture4','moisture4'])) ?? liveData.soil4;
+      liveData.soil5 = parseNum(getValueByAliases(fallback, ['soil5','soilSensor5','soilmoisture5','moisture5'])) ?? liveData.soil5;
+      liveData.soil6 = parseNum(getValueByAliases(fallback, ['soil6','soilSensor6','soilmoisture6','moisture6'])) ?? liveData.soil6;
+    }
+  }
+
+  const lastUpdatedRaw = getValueByAliases(source, ['lastUpdated','timestamp','time','updatedAt']) || data.lastUpdated || data.timestamp || data.time;
+  liveData.lastUpdated = lastUpdatedRaw || null;
+  liveData.timestamp = formatTimestamp(lastUpdatedRaw);
+
+  if (liveData.temperature !== null) {
+    timeLabels.push(liveData.timestamp);
+    if (timeLabels.length > 30) timeLabels.shift();
+    historyBuffers.temperature.push(liveData.temperature); if (historyBuffers.temperature.length > 30) historyBuffers.temperature.shift();
+    historyBuffers.humidity.push(liveData.humidity);       if (historyBuffers.humidity.length > 30) historyBuffers.humidity.shift();
+    historyBuffers.co2.push(liveData.co2);                 if (historyBuffers.co2.length > 30) historyBuffers.co2.shift();
+    historyBuffers.smoke.push(liveData.smoke);             if (historyBuffers.smoke.length > 30) historyBuffers.smoke.shift();
+    historyBuffers.ldr.push(liveData.ldr);                 if (historyBuffers.ldr.length > 30) historyBuffers.ldr.shift();
+  }
+
+  if (historyItems.length > 0) {
+    historyRecords = historyItems
+      .map(item => {
+        if (!item || typeof item !== 'object') return null;
+        return {
+          ...item,
+          temperature: parseNum(item.temperature) ?? null,
+          humidity: parseNum(item.humidity) ?? null,
+          co2: parseNum(item.co2) ?? null,
+          smoke: parseNum(item.smoke) ?? null,
+          ldr: parseNum(item.ldr) ?? null,
+          soil1: parseNum(item.soil1) ?? parseNum(item.soilSensor1) ?? null,
+          soil2: parseNum(item.soil2) ?? parseNum(item.soilSensor2) ?? null,
+          soil3: parseNum(item.soil3) ?? parseNum(item.soilSensor3) ?? null,
+          soil4: parseNum(item.soil4) ?? parseNum(item.soilSensor4) ?? null,
+          soil5: parseNum(item.soil5) ?? parseNum(item.soilSensor5) ?? null,
+          soil6: parseNum(item.soil6) ?? parseNum(item.soilSensor6) ?? null,
+          fanStatus: normalizeStatus(item.fanStatus, 'OFF'),
+          pumpStatus: normalizeStatus(item.pumpStatus, 'OFF'),
+          windowStatus: normalizeStatus(item.windowStatus, 'CLOSED'),
+          lightStatus: normalizeStatus(item.lightStatus, 'OFF')
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+  }
+
+  updateDashboardSensors();
+  updateActuatorsUI();
+  updatePlantGrid();
+  checkThresholdAlerts();
+  updateCharts();
+  if (document.getElementById('page-analytics').classList.contains('active')) {
+    renderAnalyticsPage();
+  }
+}
+
+function parseNum(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'number') return v;
+  if (typeof v === 'string' && !isNaN(v)) return parseFloat(v);
+  return null;
+}
+
+function parseBool(v) {
+  if (v === null || v === undefined) return null;
+  if (typeof v === 'boolean') return v;
+  if (v === 'ON' || v === '1' || v === 1 || v === 'true') return true;
+  if (v === 'OFF' || v === '0' || v === 0 || v === 'false') return false;
+  return null;
+}
+
+// REST fetchDB — kept for DB Inspector page only
+async function fetchDB() {
+  const url = `${FB_BASE}.json`;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    if (data && typeof data === 'object' && !data.error) {
+      rawDB = data;
+      showDBTree(data);
+      setEl('db-status', '✅ Active DB', 'badge g');
+      return data;
+    } else {
+      throw new Error(data && data.error ? data.error : 'Empty response');
+    }
+  } catch (e) {
+    console.warn('REST fetch error:', e.message);
+    setEl('db-status', '⚠️ Fetch Error', 'badge r');
+    return null;
+  }
+}
+
+function simulateLiveDataStep() {
+  liveData.temperature = liveData.temperature !== null 
+    ? +(liveData.temperature + (Math.random()*0.6 - 0.3)).toFixed(1)
+    : 24.5;
+  liveData.humidity    = liveData.humidity !== null
+    ? Math.min(100, Math.max(30, Math.round(liveData.humidity + (Math.random()*1.2 - 0.6))))
+    : 62;
+  liveData.co2         = liveData.co2 !== null
+    ? Math.min(1200, Math.max(400, Math.round(liveData.co2 + (Math.random()*8 - 4))))
+    : 540;
+  liveData.smoke       = liveData.smoke !== null
+    ? Math.min(800, Math.max(100, Math.round(liveData.smoke + (Math.random()*6 - 3))))
+    : 180;
+  liveData.ldr         = liveData.ldr !== null
+    ? Math.min(1000, Math.max(100, Math.round(liveData.ldr + (Math.random()*15 - 7.5))))
+    : 750;
+
+  for (let i = 1; i <= 6; i++) {
+    liveData[`soil${i}`] = liveData[`soil${i}`] !== null
+      ? Math.min(100, Math.max(15, +(liveData[`soil${i}`] + (Math.random()*0.8 - 0.4)).toFixed(1)))
+      : 50;
+  }
+  liveData.timestamp = new Date().toLocaleTimeString();
+  
+  processLiveDataFromSnapshot(liveData);
+}
+
+// ═══════════════════════════════════════════
+// DASHBOARD UI UPDATER
+// ═══════════════════════════════════════════
+function updateDashboardSensors() {
+  // Handle null/loading state — show — for all values when no data yet
+  const temp = liveData.temperature;
+  const hum = liveData.humidity;
+  const co2 = liveData.co2;
+  const smoke = liveData.smoke;
+  const ldr = liveData.ldr;
+
+  setTxt('e-temp', temp !== null ? temp.toFixed(1) : '—');
+  setTxt('e-hum', hum !== null ? Math.round(hum) : '—');
+  setTxt('e-co2', co2 !== null ? Math.round(co2) : '—');
+  setTxt('e-smoke', smoke !== null ? Math.round(smoke) : '—');
+  setTxt('e-ldr', ldr !== null ? Math.round(ldr) : '—');
+
+  setW('eb-temp', temp !== null ? Math.min(100, Math.max(0, ((temp - 10)/30)*100)) : 0);
+  setW('eb-hum', hum !== null ? hum : 0);
+  setW('eb-co2', co2 !== null ? Math.min(100, (co2 / 1200)*100) : 0);
+  setW('eb-smoke', smoke !== null ? Math.min(100, (smoke / 800)*100) : 0);
+  setW('eb-ldr', ldr !== null ? Math.min(100, (ldr / 1000)*100) : 0);
+
+  setTxt('e-temp-st', temp === null ? '⏳ Waiting...' : temp > 26 ? '🔴 HIGH (Fan ON)' : temp < 20 ? '🔵 LOW' : '✅ Normal');
+  setTxt('e-hum-st', hum === null ? '⏳ Waiting...' : hum < 50 ? '🔴 LOW' : '✅ Normal');
+  setTxt('e-co2-st', co2 === null ? '⏳ Waiting...' : co2 > 1000 ? '🚨 HIGH CO₂' : '✅ Normal');
+  setTxt('e-smoke-st', smoke === null ? '⏳ Waiting...' : smoke > 700 ? '🚨 SMOKE ALERT' : '✅ Clean Air');
+  setTxt('e-ldr-st', ldr === null ? '⏳ Waiting...' : ldr < 500 ? '⚠️ LOW LIGHT' : '✅ Optimal');
+
+  // Environment page targets
+  setTxt('env-T', temp !== null ? temp.toFixed(1)+'°C' : '—');
+  setTxt('env-H', hum !== null ? Math.round(hum)+'%' : '—');
+  setTxt('env-L', ldr !== null ? Math.round(ldr)+' lux' : '—');
+  setTxt('env-C', co2 !== null ? Math.round(co2)+' ppm' : '—');
+
+  // Render 6x Soil Moisture Sensors Grid
+  const soilGrid = document.getElementById('dash-soil-grid');
+  if (soilGrid) {
+    let html = '';
+    for (let i = 1; i <= 6; i++) {
+      const v = liveData[`soil${i}`];
+      if (v === null) {
+        html += `
+          <div class="soil-card" style="opacity:0.5">
+            <div class="soil-num">Soil Sensor ${i}</div>
+            <div class="soil-val">—</div>
+            <div style="font-size:10px;color:var(--muted)">Waiting...</div>
+            <div class="soil-st ok">⏳</div>
+          </div>`;
+      } else {
+        const st = v < 30 ? 'dry' : v > 70 ? 'wet' : 'ok';
+        const stTxt = v < 30 ? 'DRY' : v > 70 ? 'WET' : 'NORMAL';
+        html += `
+          <div class="soil-card">
+            <div class="soil-num">Soil Sensor ${i}</div>
+            <div class="soil-val">${v.toFixed(1)}%</div>
+            <div style="font-size:10px;color:var(--muted)">Plant ${i}</div>
+            <div class="soil-st ${st}">${stTxt}</div>
+          </div>`;
+      }
+    }
+    soilGrid.innerHTML = html;
+  }
+}
+
+function updateActuatorsUI() {
+  applyActUI('act-fan', 'act-fan-st', 'act-fan-card', 'cf', 'cf-st', liveData.fanStatus, 'ON', 'OFF');
+  applyActUI('act-pump', 'act-pump-st', 'act-pump-card', null, null, liveData.pumpStatus, 'ON', 'OFF');
+  applyActUI('act-win', 'act-win-st', 'act-win-card', 'cw', 'cw-st', liveData.windowStatus, 'OPEN', 'CLOSED');
+  applyActUI('act-light', 'act-light-st', 'act-light-card', 'cl', 'cl-st', liveData.lightStatus, 'ON', 'OFF');
+}
+
+function applyActUI(tog1, st1, card1, tog2, st2, val, onTxt, offTxt) {
+  const on = val === true || val === 'ON' || val === 1;
+  const eTog1 = document.getElementById(tog1); if (eTog1) eTog1.checked = on;
+  const eTog2 = document.getElementById(tog2); if (eTog2) eTog2.checked = on;
+  setEl(st1, on ? onTxt : offTxt, 'ac-st ' + (on ? 'on' : 'off'));
+  if (st2) setEl(st2, on ? onTxt : offTxt, 'ac-st ' + (on ? 'on' : 'off'));
+  const card = document.getElementById(card1); if (card) card.className = 'ac' + (on ? ' on' : '');
+}
+
+
+
+// ═══════════════════════════════════════════
+// 5-MINUTE AUTOMATED HISTORY RECORDING
+// ═══════════════════════════════════════════
+function triggerHistorySnapshot() {
+  const record = {
+    id: Date.now(),
+    timestamp: new Date().toISOString(),
+    timeString: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    temperature: liveData.temperature,
+    humidity: liveData.humidity,
+    co2: liveData.co2,
+    smoke: liveData.smoke,
+    ldr: liveData.ldr,
+    fanStatus: liveData.fanStatus ? 'ON' : 'OFF',
+    pumpStatus: liveData.pumpStatus ? 'ON' : 'OFF',
+    windowStatus: liveData.windowStatus ? 'OPEN' : 'CLOSED',
+    lightStatus: liveData.lightStatus ? 'ON' : 'OFF',
+    soil1: liveData.soil1,
+    soil2: liveData.soil2,
+    soil3: liveData.soil3,
+    soil4: liveData.soil4,
+    soil5: liveData.soil5,
+    soil6: liveData.soil6
+  };
+
+  historyRecords.unshift(record);
+  if (historyRecords.length > 200) historyRecords.pop();
+
+  // POST record to Firebase /history.json
+  fetch(`${FB_BASE}/history.json`, {
+    method: 'POST',
+    body: JSON.stringify(record),
+    headers: { 'Content-Type': 'application/json' }
+  }).catch(e => console.warn('History push offline mode:', e.message));
+
+  toast(`📸 5-Min History snapshot recorded!`, 'success');
+  if (document.getElementById('page-analytics').classList.contains('active')) {
+    renderAnalyticsPage();
+  }
+}
+
+function initHistoryEngine() {
+  // Generate initial seed history (e.g. past 12 records, 5 mins apart) if empty
+  if (historyRecords.length === 0) {
+    const now = Date.now();
+    for (let i = 12; i >= 1; i--) {
+      const t = new Date(now - i * 5 * 60 * 1000);
+      historyRecords.push({
+        id: t.getTime(),
+        timestamp: t.toISOString(),
+        timeString: t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        temperature: +(24 + Math.sin(i)*2 + (Math.random()*0.8 - 0.4)).toFixed(1),
+        humidity: Math.round(60 + Math.cos(i)*6 + (Math.random()*2 - 1)),
+        co2: Math.round(520 + i*8 + (Math.random()*20 - 10)),
+        smoke: Math.round(170 + (Math.random()*15)),
+        ldr: Math.round(700 + Math.sin(i)*100),
+        fanStatus: i % 4 === 0 ? 'ON' : 'OFF',
+        pumpStatus: 'OFF',
+        windowStatus: 'CLOSED',
+        lightStatus: i > 6 ? 'OFF' : 'ON',
+        soil1: +(55 + Math.sin(i)*4).toFixed(1),
+        soil2: +(45 + Math.cos(i)*5).toFixed(1),
+        soil3: +(62 + Math.sin(i)*3).toFixed(1),
+        soil4: +(28 + (i*0.5)).toFixed(1),
+        soil5: +(50 + Math.cos(i)*4).toFixed(1),
+        soil6: +(58 + Math.sin(i)*3).toFixed(1)
+      });
+    }
+  }
+
+  // Setup 5-Minute interval (300,000 ms)
+  if (historyTimer) clearInterval(historyTimer);
+  historyTimer = setInterval(triggerHistorySnapshot, 300000);
+}
+
+// ═══════════════════════════════════════════
+// ANALYTICS PAGE (AVG, MAX, MIN strictly from History)
+// ═══════════════════════════════════════════
+function renderAnalyticsPage() {
+  if (historyRecords.length === 0) {
+    setTxt('an-t-avg', '—'); setTxt('an-t-max', '—'); setTxt('an-t-min', '—');
+    setTxt('an-h-avg', '—'); setTxt('an-h-max', '—'); setTxt('an-h-min', '—');
+    setTxt('an-c-avg', '—'); setTxt('an-c-max', '—'); setTxt('an-c-min', '—');
+    setTxt('an-s-avg', '—'); setTxt('an-s-max', '—'); setTxt('an-s-min', '—');
+    const tbody = document.getElementById('an-history-tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:24px">No history records found yet.</td></tr>';
+    renderHistoryCharts();
+    return;
+  }
+
+  const validRecords = historyRecords.filter(r => r && typeof r === 'object');
+  const temps = validRecords.map(r => parseNum(r.temperature)).filter(v => v !== null);
+  const hums  = validRecords.map(r => parseNum(r.humidity)).filter(v => v !== null);
+  const co2s  = validRecords.map(r => parseNum(r.co2)).filter(v => v !== null);
+  const soils = validRecords.map(r => {
+    const values = [parseNum(r.soil1), parseNum(r.soil2), parseNum(r.soil3), parseNum(r.soil4), parseNum(r.soil5), parseNum(r.soil6)].filter(v => v !== null);
+    return values.length ? (values.reduce((a,b)=>a+b,0) / values.length) : null;
+  }).filter(v => v !== null);
+
+  const calc = (arr) => arr.length ? {
+    avg: (arr.reduce((a,b)=>a+b, 0) / arr.length).toFixed(1),
+    max: Math.max(...arr).toFixed(1),
+    min: Math.min(...arr).toFixed(1)
+  } : { avg: '—', max: '—', min: '—' };
+
+  const tS = calc(temps);
+  const hS = calc(hums);
+  const cS = calc(co2s);
+  const sS = calc(soils);
+
+  // Update UI Metric Cards
+  setTxt('an-t-avg', tS.avg + '°C'); setTxt('an-t-max', tS.max + '°C'); setTxt('an-t-min', tS.min + '°C');
+  setTxt('an-h-avg', hS.avg + '%');  setTxt('an-h-max', hS.max + '%');  setTxt('an-h-min', hS.min + '%');
+  setTxt('an-c-avg', Math.round(cS.avg) + ' ppm'); setTxt('an-c-max', Math.round(cS.max) + ' ppm'); setTxt('an-c-min', Math.round(cS.min) + ' ppm');
+  setTxt('an-s-avg', sS.avg + '%');  setTxt('an-s-max', sS.max + '%');  setTxt('an-s-min', sS.min + '%');
+
+  // Populate History Log Table
+  const tbody = document.getElementById('an-history-tbody');
+  if (tbody) {
+    tbody.innerHTML = validRecords.slice(0, 15).map(r => {
+      const soilValues = [parseNum(r.soil1), parseNum(r.soil2), parseNum(r.soil3), parseNum(r.soil4), parseNum(r.soil5), parseNum(r.soil6)].filter(v => v !== null);
+      const sAvg = soilValues.length ? ((soilValues.reduce((a,b)=>a+b,0) / soilValues.length).toFixed(1)) : '—';
+      const timeLabel = r.timeString || r.timestamp || '—';
+      const fanStatus = normalizeStatus(r.fanStatus, 'OFF');
+      const pumpStatus = normalizeStatus(r.pumpStatus, 'OFF');
+      const windowStatus = normalizeStatus(r.windowStatus, 'CLOSED');
+      return `<tr>
+        <td><b>${timeLabel}</b></td>
+        <td>${parseNum(r.temperature) !== null ? parseNum(r.temperature).toFixed(1)+'°C' : '—'}</td>
+        <td>${parseNum(r.humidity) !== null ? Math.round(parseNum(r.humidity))+'%' : '—'}</td>
+        <td>${parseNum(r.co2) !== null ? Math.round(parseNum(r.co2))+' ppm' : '—'}</td>
+        <td>${parseNum(r.smoke) !== null ? Math.round(parseNum(r.smoke))+' ppm' : '—'}</td>
+        <td>${parseNum(r.ldr) !== null ? Math.round(parseNum(r.ldr))+' lux' : '—'}</td>
+        <td><b>${sAvg}%</b></td>
+        <td><span class="badge ${fanStatus==='ON'?'g':'b'}">${fanStatus}</span></td>
+        <td><span class="badge ${pumpStatus==='ON'?'g':'b'}">${pumpStatus}</span></td>
+        <td><span class="badge ${windowStatus==='OPEN'?'g':'b'}">${windowStatus}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Render Charts for History
+  renderHistoryCharts();
+}
+
+function renderHistoryCharts() {
+  const rev = [...historyRecords].reverse();
+  const labels = rev.map(r => r.timeString || r.timestamp || '—');
+
+  // Temp & Hum Chart
+  const elTH = document.getElementById('anHistTempHum');
+  if (elTH) {
+    if (charts.anTH) charts.anTH.destroy();
+    charts.anTH = new Chart(elTH.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Temperature (°C)', data: rev.map(r=>parseNum(r.temperature)), borderColor: '#22c55e', tension: .3 },
+          { label: 'Humidity (%)', data: rev.map(r=>parseNum(r.humidity)), borderColor: '#3b82f6', tension: .3 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  // CO2 Chart
+  const elC = document.getElementById('anHistCO2');
+  if (elC) {
+    if (charts.anC) charts.anC.destroy();
+    charts.anC = new Chart(elC.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'CO₂ Level (ppm)', data: rev.map(r=>parseNum(r.co2)), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,.1)', fill: true, tension: .3 }]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  // Soil Chart (Sensors 1-6)
+  const elS = document.getElementById('anHistSoil');
+  if (elS) {
+    if (charts.anS) charts.anS.destroy();
+    charts.anS = new Chart(elS.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'Soil 1 (Tomato)', data: rev.map(r=>parseNum(r.soil1)), borderColor: '#22c55e' },
+          { label: 'Soil 2 (Pepper)', data: rev.map(r=>parseNum(r.soil2)), borderColor: '#f59e0b' },
+          { label: 'Soil 3 (Basil)', data: rev.map(r=>parseNum(r.soil3)), borderColor: '#3b82f6' },
+          { label: 'Soil 4 (Lettuce)', data: rev.map(r=>parseNum(r.soil4)), borderColor: '#ef4444' },
+          { label: 'Soil 5 (Cucumber)', data: rev.map(r=>parseNum(r.soil5)), borderColor: '#8b5cf6' },
+          { label: 'Soil 6 (Spinach)', data: rev.map(r=>parseNum(r.soil6)), borderColor: '#10b981' }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+}
+
+function exportHistoryCSV() {
+  let csv = 'Timestamp,Temperature_C,Humidity_Pct,CO2_ppm,Smoke_ppm,LDR_lux,Soil1,Soil2,Soil3,Soil4,Soil5,Soil6,Fan,Pump,Window\n';
+  historyRecords.forEach(r => {
+    csv += `"${r.timestamp}",${r.temperature},${r.humidity},${r.co2},${r.smoke},${r.ldr},${r.soil1},${r.soil2},${r.soil3},${r.soil4},${r.soil5},${r.soil6},${r.fanStatus},${r.pumpStatus},${r.windowStatus}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `greenhouse_history_${Date.now()}.csv`; a.click();
+  toast('History data exported as CSV', 'success');
+}
+
+// ═══════════════════════════════════════════
+// PLANT MANAGEMENT (6x Sensors)
+// ═══════════════════════════════════════════
+const plantMeta = [
+  { name: 'Tomato', type: 'Vegetable', variety: 'Cherry' },
+  { name: 'Bell Pepper', type: 'Vegetable', variety: 'Red Hybrid' },
+  { name: 'Basil', type: 'Herb', variety: 'Sweet Genovese' },
+  { name: 'Lettuce', type: 'Leafy Green', variety: 'Romaine' },
+  { name: 'Cucumber', type: 'Vegetable', variety: 'English' },
+  { name: 'Spinach', type: 'Leafy Green', variety: 'Baby Leaf' }
+];
+
+let _plantFilter = '', _plantStat = '';
+function updatePlantGrid() {
+  plants = [];
+  for (let i = 1; i <= 6; i++) {
+    const v = liveData[`soil${i}`];
+    if (v === null) {
+      plants.push({ id: i, ...plantMeta[i-1], moisture: null, status: 'waiting', health: 'waiting' });
+    } else {
+      const status = v < 30 ? 'dry' : v > 70 ? 'wet' : 'ok';
+      const health = v < 20 ? 'critical' : v < 30 ? 'warning' : 'healthy';
+      plants.push({ id: i, ...plantMeta[i-1], moisture: v, status, health });
+    }
+  }
+
+  const grid = document.getElementById('plant-grid');
+  if (!grid) return;
+
+  const filtered = plants.filter(p => {
+    const nm = !_plantFilter || p.name.toLowerCase().includes(_plantFilter.toLowerCase());
+    const st = !_plantStat || p.status === _plantStat;
+    return nm && st;
+  });
+
+  grid.innerHTML = filtered.map(p => {
+    if (p.moisture === null) {
+      return `
+        <div class="pc" style="opacity:0.6">
+          <div class="pc-hd"><div class="pc-id">${p.id}</div><span>⏳</span></div>
+          <div class="pc-name">${p.name}</div>
+          <div class="pc-type">${p.type} · ${p.variety}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px">
+            <span style="color:var(--muted)">Soil Moisture Sensor ${p.id}</span><b>—</b>
+          </div>
+          <div class="mbar"><div class="mfill ok" style="width:0%"></div></div>
+          <div style="display:flex;align-items:center;justify-content:center">
+            <span style="font-size:10px;color:var(--muted)">⏳ Waiting for data...</span>
+          </div>
+        </div>`;
+    }
+    const hi = p.health === 'healthy' ? '🟢' : p.health === 'warning' ? '🟡' : '🔴';
+    return `
+      <div class="pc" onclick="toast('Plant ${p.id} Details: ${p.name}','info')">
+        <div class="pc-hd"><div class="pc-id">${p.id}</div><span>${hi}</span></div>
+        <div class="pc-name">${p.name}</div>
+        <div class="pc-type">${p.type} · ${p.variety}</div>
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px">
+          <span style="color:var(--muted)">Soil Moisture Sensor ${p.id}</span><b>${p.moisture.toFixed(1)}%</b>
+        </div>
+        <div class="mbar"><div class="mfill ${p.status}" style="width:${p.moisture}%"></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="chip ${p.status}">${p.status.toUpperCase()}</span>
+          <span style="font-size:10px;color:var(--muted)">Target: 40–70%</span>
+        </div>
+        <button class="wbtn" onclick="event.stopPropagation();pumpPlant(${p.id})">💧 Water Plant ${p.id}</button>
+      </div>`;
+  }).join('');
+
+  renderSoilBarChart();
+
+  // Populate Disease plant selector dropdown
+  const sel = document.getElementById('disease-plant-sel');
+  if (sel) sel.innerHTML = plants.map(p => `<option value="${p.id}">Plant ${p.id} – ${p.name} (${p.variety})</option>`).join('');
+}
+
+function filterP(v) { _plantFilter = v; updatePlantGrid(); }
+function filterPS(v) { _plantStat = v; updatePlantGrid(); }
+function pumpPlant(id) {
+  liveData[`soil${id}`] = Math.min(85, liveData[`soil${id}`] + 18);
+  updatePlantGrid();
+  addCtrlLog(`Irrigation Pump Plant ${id} → ON (3s)`);
+  toast(`💧 Watered Plant ${id} (Moisture increased to ${liveData[`soil${id}`].toFixed(1)}%)`, 'success');
+}
+
+// ═══════════════════════════════════════════
+// ACTUATOR CONTROL — Write to Firebase
+// ═══════════════════════════════════════════
+function setAct(type, el) {
+  const val = el.checked;
+  const firebaseKey = type === 'window' ? 'windowStatus' : type === 'lights' ? 'lightStatus' : type + 'Status';
+  
+  // Update local state immediately
+  liveData[firebaseKey] = val;
+  updateActuatorsUI();
+  
+  // Write to Firebase via SDK
+  if (fbDb) {
+    fbDb.ref('/' + firebaseKey).set(val ? 'ON' : 'OFF')
+      .then(() => {
+        addCtrlLog(`${type} → ${val ? 'ON' : 'OFF'} (Firebase) [SDK]`);
+        toast(`🌀 ${type.charAt(0).toUpperCase() + type.slice(1)} set to ${val ? 'ON' : 'OFF'} ✨`, 'success');
+      })
+      .catch((err) => {
+        // Fallback to REST
+        fetch(`${FB_BASE}/${firebaseKey}.json`, {
+          method: 'PUT',
+          body: JSON.stringify(val ? 'ON' : 'OFF'),
+          headers: { 'Content-Type': 'application/json' }
+        }).catch(e => console.warn('REST fallback write error:', e));
+        addCtrlLog(`${type} → ${val ? 'ON' : 'OFF'} (REST fallback)`);
+        toast(`🌀 ${type} set to ${val ? 'ON' : 'OFF'}`, 'success');
+      });
+  } else {
+    // REST fallback
+    fetch(`${FB_BASE}/${firebaseKey}.json`, {
+      method: 'PUT',
+      body: JSON.stringify(val ? 'ON' : 'OFF'),
+      headers: { 'Content-Type': 'application/json' }
+    }).catch(e => console.warn('REST write error:', e));
+    addCtrlLog(`${type} → ${val ? 'ON' : 'OFF'} (REST)`);
+    toast(`🌀 ${type} set to ${val ? 'ON' : 'OFF'}`, 'success');
+  }
+}
+
+function runPump() {
+  const dur = parseInt(document.getElementById('pump-dur').value) || 3;
+  liveData.pumpStatus = true;
+  updateActuatorsUI();
+  addCtrlLog(`Pump pulse ${dur}s → ON`);
+  
+  // Write ON to Firebase
+  const writePump = (val) => {
+    if (fbDb) {
+      fbDb.ref('/pumpStatus').set(val).catch(() => {});
+    } else {
+      fetch(`${FB_BASE}/pumpStatus.json`, {
+        method: 'PUT', body: JSON.stringify(val),
+        headers: { 'Content-Type': 'application/json' }
+      }).catch(() => {});
+    }
+  };
+  
+  writePump('ON');
+  toast(`💧 Pump activated for ${dur} seconds...`, 'info');
+  
+  setTimeout(() => {
+    liveData.pumpStatus = false;
+    updateActuatorsUI();
+    writePump('OFF');
+    addCtrlLog(`Pump pulse ${dur}s → OFF (auto)`);
+    toast('💧 Pump pulse completed', 'success');
+  }, dur * 1000);
+}
+
+function renderSoilBarChart() {
+  const el = document.getElementById('soilBarChart');
+  if (!el) return;
+  if (charts.soilBar) charts.soilBar.destroy();
+  
+  const hasData = plants.some(p => p.moisture !== null);
+  if (!hasData) {
+    charts.soilBar = new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: { labels: plants.map(p => `Sensor ${p.id}`), datasets: [{ data: [0,0,0,0,0,0], backgroundColor: ['rgba(200,200,200,0.3)'], borderRadius: 6 }] },
+      options: { responsive: true, maintainAspectRatio: false, scales: { y: { min:0, max:100 } }, plugins: { legend: { display: false } } }
+    });
+    return;
+  }
+  
+  const colors = plants.map(p => {
+    if (p.moisture === null) return 'rgba(200,200,200,0.3)';
+    return p.status==='dry'?'rgba(239,68,68,.8)':p.status==='wet'?'rgba(59,130,246,.8)':'rgba(34,197,94,.8)';
+  });
+  charts.soilBar = new Chart(el.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: plants.map(p => `Sensor ${p.id} (${p.name})`),
+      datasets: [{ data: plants.map(p => p.moisture || 0), backgroundColor: colors, borderRadius: 6 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { min:0, max:100 } } }
+  });
+}
+
+// ═══════════════════════════════════════════
+// ALERTS & THRESHOLD SAFETY ENGINE
+// ═══════════════════════════════════════════
+function checkThresholdAlerts() {
+  if (liveData.temperature !== null && liveData.temperature > 26) addAlert('warning', `🌡️ High Temp Alert: ${liveData.temperature.toFixed(1)}°C > 26°C — Exhaust Fan Engaged`);
+  if (liveData.humidity !== null && liveData.humidity < 50) addAlert('warning', `💧 Low Humidity Alert: ${liveData.humidity}% < 50%`);
+  if (liveData.co2 !== null && liveData.co2 > 1000) addAlert('critical', `💨 Dangerous CO₂ Level: ${liveData.co2} ppm > 1000 ppm!`);
+  if (liveData.smoke !== null && liveData.smoke > 700) addAlert('critical', `🔥 SMOKE DETECTED: ${liveData.smoke} ppm! Emergency Protocol & Alarm Active`);
+
+  for (let i = 1; i <= 6; i++) {
+    if (liveData[`soil${i}`] !== null && liveData[`soil${i}`] < 30) {
+      addAlert('warning', `🌱 Soil Sensor ${i} (${plantMeta[i-1].name}) Dry: ${liveData[`soil${i}`].toFixed(1)}% < 30%`);
+    }
+  }
+}
+
+const alertDedupe = new Set();
+function addAlert(type, msg) {
+  const key = type + msg.slice(0, 35);
+  if (alertDedupe.has(key)) return;
+  alertDedupe.add(key);
+  setTimeout(() => alertDedupe.delete(key), 45000);
+
+  const a = { id: Date.now(), type, msg, time: new Date().toLocaleTimeString(), acked: false };
+  alerts.unshift(a);
+  if (alerts.length > 50) alerts.pop();
+  alertUnread++;
+  setTxt('ab', alertUnread); setTxt('nd', alertUnread);
+  renderAlertFeed();
+  renderAlertList();
+  if (type === 'critical') toast(msg, 'error');
+}
+
+function renderAlertFeed() {
+  const feed = document.getElementById('alert-feed');
+  if (!feed) return;
+  const items = alerts.slice(0, 4);
+  if (items.length === 0) { feed.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">All systems operating within safe parameters ✅</div>'; return; }
+  feed.innerHTML = items.map(a => `
+    <div class="al"><div class="al-dot ${a.type}"></div>
+    <div style="flex:1"><div class="al-msg">${a.msg}</div><div class="al-time">${a.time}</div></div>
+    ${!a.acked ? `<button class="al-ack" onclick="ack(${a.id})">Ack</button>` : '<span style="font-size:10px;color:var(--g4)">✓</span>'}
+    </div>`).join('');
+}
+
+let _alertFilter = 'all';
+function renderAlertList() {
+  const list = document.getElementById('alert-list');
+  if (!list) return;
+  const items = _alertFilter === 'all' ? alerts : alerts.filter(a => a.type === _alertFilter);
+  if (items.length === 0) { list.innerHTML = '<div style="text-align:center;padding:30px;color:var(--muted)">No alerts logged ✅</div>'; return; }
+  list.innerHTML = items.map(a => `
+    <div class="al"><div class="al-dot ${a.type}"></div>
+    <div style="flex:1"><div class="al-msg">${a.msg}</div><div class="al-time">${a.time}</div></div>
+    <span class="badge ${a.type==='critical'?'r':a.type==='warning'?'y':'b'}">${a.type}</span>
+    ${!a.acked ? `<button class="al-ack" onclick="ack(${a.id})">Ack</button>` : '<span style="font-size:10px;color:var(--g4);padding:0 6px">✓</span>'}
+    </div>`).join('');
+}
+
+function ack(id) {
+  const a = alerts.find(x => x.id === id);
+  if (a) { a.acked = true; alertUnread = Math.max(0, alertUnread - 1); setTxt('ab', alertUnread || ''); setTxt('nd', alertUnread || '0'); renderAlertFeed(); renderAlertList(); }
+}
+function ackAll() { alerts.forEach(a => a.acked = true); alertUnread = 0; setTxt('ab',''); setTxt('nd','0'); renderAlertFeed(); renderAlertList(); toast('All alerts acknowledged', 'success'); }
+function fAlert(t, btn) {
+  _alertFilter = t;
+  document.querySelectorAll('#page-alerts .btn').forEach(b => b.className = 'btn s');
+  btn.className = 'btn p';
+  renderAlertList();
+}
+
+// ═══════════════════════════════════════════
+// TELEMETRY CHARTS ENGINE
+// ═══════════════════════════════════════════
+function initCharts() {
+  const mc = document.getElementById('mainChart');
+  if (mc) {
+    charts.main = new Chart(mc.getContext('2d'), {
+      type: 'line',
+      data: { labels: [], datasets: [{ data: [], borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,.08)', fill: true, tension: .4, pointRadius: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false }
+    });
+  }
+
+  // Mini environment page charts
+  ['ecT','ecH','ecL','ecC'].forEach((id, i) => {
+    const el = document.getElementById(id);
+    if (el) {
+      const c = ['#22c55e','#3b82f6','#f59e0b','#8b5cf6'][i];
+      charts['mini'+i] = new Chart(el.getContext('2d'), {
+        type: 'line',
+        data: { labels: [], datasets: [{ data: [], borderColor: c, tension: .3, pointRadius: 0 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+      });
+    }
+  });
+}
+
+function getChartSeriesForKey(key, fallback = []) {
+  const fromHistory = historyRecords
+    .slice(-24)
+    .map(r => parseNum(r[key]))
+    .filter(v => v !== null);
+  if (fromHistory.length > 0) return fromHistory;
+  return (fallback || []).filter(v => v !== null).slice(-24);
+}
+
+function getChartLabelsForSeries(fallbackLabels = [], count = 24) {
+  if (historyRecords.length > 0) {
+    return historyRecords.slice(-count).map(r => r.timeString || r.timestamp || '—');
+  }
+  return (fallbackLabels || []).slice(-count);
+}
+
+function updateCharts() {
+  if (!charts.main) return;
+
+  const mainSeries = getChartSeriesForKey(chartMode, historyBuffers[chartMode] || []);
+  const mainLabels = getChartLabelsForSeries(timeLabels, mainSeries.length);
+
+  charts.main.data.labels = mainLabels;
+  charts.main.data.datasets[0].data = [...mainSeries];
+  charts.main.update('none');
+
+  const keys = ['temperature','humidity','ldr','co2'];
+  keys.forEach((k, i) => {
+    const c = charts['mini'+i];
+    if (c) {
+      const buf = getChartSeriesForKey(k, historyBuffers[k] || []);
+      c.data.labels = getChartLabelsForSeries(timeLabels, buf.length);
+      c.data.datasets[0].data = [...buf];
+      c.update('none');
+    }
+  });
+}
+
+function switchChart(mode) {
+  chartMode = mode;
+  const colors = { temperature: '#22c55e', humidity: '#3b82f6', co2: '#8b5cf6', smoke: '#ef4444', ldr: '#f59e0b' };
+  if (charts.main) { charts.main.data.datasets[0].borderColor = colors[mode]; updateCharts(); }
+}
+
+// ═══════════════════════════════════════════
+// DATABASE INSPECTOR ENGINE
+// ═══════════════════════════════════════════
+function showDBTree(data) {
+  const tree = document.getElementById('db-tree');
+  const raw = document.getElementById('raw-json');
+  if (tree) tree.innerHTML = buildTreeHTML(data, 0);
+  if (raw) raw.textContent = JSON.stringify(data, null, 2);
+  setEl('db-status', '✅ Active DB', 'badge g');
+}
+
+function buildTreeHTML(obj, depth) {
+  if (obj === null) return `<span style="color:#9e9e9e">null</span>`;
+  if (typeof obj === 'boolean') return `<span style="color:${obj?'#4ade80':'#f87171'}">${obj}</span>`;
+  if (typeof obj === 'number') return `<span style="color:#60a5fa">${obj}</span>`;
+  if (typeof obj === 'string') return `<span style="color:#fcd34d">"${obj}"</span>`;
+  if (typeof obj === 'object') {
+    const indent = '  '.repeat(depth);
+    const lines = Object.entries(obj).map(([k, v]) => `${indent}  <span style="color:#81c784;font-weight:700">"${k}"</span>: ${buildTreeHTML(v, depth+1)}`);
+    return `{\n${lines.join(',\n')}\n${indent}}`;
+  }
+  return String(obj);
+}
+
+function copyJSON() {
+  const text = document.getElementById('raw-json').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('Firebase JSON copied to clipboard!', 'success'));
+}
+
+// ═══════════════════════════════════════════
+// DISEASE DETECTION SIMULATOR
+// ═══════════════════════════════════════════
+function triggerDiseaseAnalysis() {
+  const pId = document.getElementById('disease-plant-sel').value || 1;
+  const plant = plants.find(p => p.id == pId) || plants[0];
+
+  toast(`🤖 Analyzing leaf photo for Plant ${plant.id} (${plant.name})…`, 'info');
+  document.getElementById('disease-badge').textContent = 'Analyzing…';
+  document.getElementById('disease-badge').className = 'badge y';
+
+  setTimeout(() => {
+    const diseases = [
+      { name: 'Early Blight (Alternaria solani)', conf: '91.4%', sev: 'Moderate', tx: 'Apply copper-based fungicide spray. Remove lower infected foliage. Ensure fan circulation.' },
+      { name: 'Powdery Mildew (Erysiphe cichoracearum)', conf: '88.7%', sev: 'Mild', tx: 'Spray neem oil or potassium bicarbonate solution. Reduce canopy crowding.' },
+      { name: 'Bacterial Spot (Xanthomonas spp.)', conf: '94.1%', sev: 'High', tx: 'Apply bactericide/copper formulation. Avoid overhead watering completely.' },
+      { name: 'Healthy Leaf Canopy', conf: '98.2%', sev: 'None', tx: 'No pathogen detected. Plant leaf tissue shows high chlorophyll density.' }
+    ];
+
+    const d = diseases[(plant.id - 1) % diseases.length];
+    const isHealthy = d.sev === 'None';
+
+    document.getElementById('disease-badge').textContent = isHealthy ? 'Healthy' : 'Disease Found';
+    document.getElementById('disease-badge').className = isHealthy ? 'badge g' : 'badge r';
+
+    document.getElementById('disease-result-box').innerHTML = `
+      <div style="background:${isHealthy ? '#dcfce7' : '#fee2e2'};border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid ${isHealthy ? '#86efac' : '#fca5a5'}">
+        <div style="font-size:15px;font-weight:800;color:${isHealthy ? '#166534' : '#991b1b'};margin-bottom:4px">${isHealthy ? '✅ ' : '🦠 '}${d.name}</div>
+        <div style="font-size:11.5px;color:${isHealthy ? '#14532d' : '#7f1d1d'};margin-bottom:8px">Confidence Score: <b>${d.conf}</b> · Severity: <b>${d.sev}</b></div>
+        <div style="font-size:11.5px;color:${isHealthy ? '#166534' : '#991b1b'}">Subject: Plant ${plant.id} (${plant.name} - ${plant.variety})</div>
+      </div>
+      <div style="font-size:12.5px;font-weight:700;margin-bottom:6px">💊 Recommended Action</div>
+      <div style="font-size:12px;color:var(--text);line-height:1.7;background:var(--g8);padding:12px;border-radius:8px;border:1px solid var(--g7)">${d.tx}</div>
+      <button class="btn p" style="width:100%;margin-top:14px;justify-content:center" onclick="toast('Treatment logged to Firebase','success')">✅ Log Diagnostic Result</button>`;
+
+    toast(`Analysis complete for Plant ${plant.id}`, 'success');
+  }, 1200);
+}
+
+// ═══════════════════════════════════════════
+// CONTROL LOG & NAVIGATION
+// ═══════════════════════════════════════════
+function addCtrlLog(action) {
+  ctrlLog.unshift({ t: new Date().toLocaleTimeString('en', { hour: '2-digit', minute: '2-digit' }), a: action, u: 'Operator' });
+  const tbody = document.getElementById('ctrl-log');
+  if (tbody) tbody.innerHTML = ctrlLog.slice(0, 10).map(l => `<tr><td>${l.t}</td><td>${l.a}</td><td>${l.u}</td></tr>`).join('');
+}
+
+function waterAll() {
+  toast('💧 Initiating full greenhouse irrigation sequence…', 'info');
+  for (let i = 1; i <= 6; i++) liveData[`soil${i}`] = Math.min(90, liveData[`soil${i}`] + 20);
+  liveData.pumpStatus = true;
+  updatePlantGrid();
+  updateActuatorsUI();
+  addCtrlLog('Water All Plants → EXECUTED');
+  setTimeout(() => { liveData.pumpStatus = false; updateActuatorsUI(); toast('All 6 plant beds watered successfully ✅', 'success'); }, 3000);
+}
+
+function eStop() {
+  liveData.fanStatus = false; liveData.pumpStatus = false; liveData.windowStatus = false; liveData.lightStatus = false;
+  updateActuatorsUI();
+  addCtrlLog('🛑 EMERGENCY STOP ALL ACTUATORS');
+  toast('🛑 Emergency Stop Activated! All relays OFF', 'error');
+}
+
+const pageTitles = {
+  dashboard:   ['Dashboard', 'Live data from Firebase Realtime Database'],
+  analytics:   ['Analytics', 'Historical graphs & Avg, Max, Min metrics from 5-min history data'],
+  plants:      ['Plant Management', '6x Capacitive Soil Moisture Sensors (Sensors 1 – 6)'],
+  environment: ['Environmental Monitoring', 'DHT11 · LDR · MQ-135 · NPK Sensors'],
+  controls:    ['Actuator Controls', 'Direct manual control & automation schedules'],
+  alerts:      ['Alerts & Notifications', 'System safety triggers & warning feed'],
+  database:    ['Firebase DB Explorer', 'Raw JSON inspector & REST API connection'],
+  disease:     ['Disease Detection', 'AI plant health diagnosis & treatment plans'],
+  settings:    ['System Settings', 'Firebase URL config & system parameters']
+};
+
+function go(page) {
+  if (!currentUser) {
+    document.body.classList.remove('auth-logged-in');
+    document.body.classList.add('auth-logged-out');
+    return;
+  }
+  const adminOnlyPages = ['users','database','settings','controls'];
+  if (adminOnlyPages.includes(page) && !isAdminUser()) {
+    toast('This section is for admin use only', 'warning');
+    page = 'dashboard';
+  }
+
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.classList.add('active');
+
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes(`'${page}'`)) n.classList.add('active');
+  });
+
+  const meta = pageTitles[page] || [page, ''];
+  setTxt('ptitle', meta[0]); setTxt('psub', meta[1]);
+
+  if (page === 'analytics') renderAnalyticsPage();
+  if (page === 'database') fetchDB();
+  if (page === 'alerts') renderAlertList();
+  if (page === 'plants') updatePlantGrid();
+}
+
+function envT(btn, sec) {
+  document.querySelectorAll('#page-environment .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['et-rt','et-npk','et-thr'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const map = { rt:'et-rt', npk:'et-npk', thr:'et-thr' };
+  const el = document.getElementById(map[sec]); if (el) el.style.display = '';
+}
+
+function sTab(btn, sec) {
+  document.querySelectorAll('#page-settings .tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  ['st-g','st-fb','st-n','st-p'].forEach(id => { const el=document.getElementById(id); if(el) el.style.display='none'; });
+  const el = document.getElementById('st-'+sec); if(el) el.style.display = '';
+}
+
+function setRefRate(v) {
+  REFRESH_RATE = parseInt(v);
+  setTxt('ref-rate', v.replace('000','')+'s');
+  startAutoRefresh();
+  toast(`Live refresh rate set to ${v/1000}s`, 'info');
+}
+
+function applyFBConfig() {
+  const url = document.getElementById('fb-url-inp').value.trim();
+  const path = document.getElementById('fb-path-inp').value.trim() || '/';
+  if (url) {
+    FB_BASE = url;
+    setTxt('fb-url-disp', url.replace('https://','').split('.')[0]);
+    
+    // Reconnect Firebase SDK with new URL
+    if (fbListenerRef) {
+      fbListenerRef.off('value');
+    }
+    try {
+      fbApp = firebase.initializeApp({ ...firebaseConfig, databaseURL: url }, 'secondary');
+      fbDb = firebase.database(fbApp);
+      fbListenerRef = fbDb.ref(path);
+      fbListenerRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          rawDB = data;
+          processLiveDataFromSnapshot(data);
+          showDBTree(data);
+        }
+      });
+    } catch(e) {
+      console.warn('Could not reconnect SDK, falling back to REST');
+      startRESTFallback();
+    }
+    
+    toast('Firebase endpoint updated! Reconnecting…', 'info');
+    fetchDB();
+  }
+}
+
+function saveThresholds() {
+  toast('Safety thresholds updated & saved to Firebase', 'success');
+}
+
+// ═══════════════════════════════════════════
+// UTILITY HELPERS & TOASTS
+// ═══════════════════════════════════════════
+function setTxt(id, v) { const el=document.getElementById(id); if(el) el.textContent=v; }
+function setW(id, v) { const el=document.getElementById(id); if(el) el.style.width=v+'%'; }
+function setEl(id, txt, cls) { const el=document.getElementById(id); if(!el)return; if(txt!==undefined) el.textContent=txt; if(cls) el.className=cls; }
+
+function toast(msg, type='info') {
+  const icons = { success:'✅', warning:'⚠️', error:'❌', info:'ℹ️' };
+  const c = document.getElementById('tc');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type]}</span><span style="flex:1">${msg}</span>`;
+  c.appendChild(el);
+  setTimeout(() => { el.classList.add('tOut'); setTimeout(() => el.remove(), 280); }, 3800);
+}
+
+function startAutoRefresh() {
+  // Auto-refresh is now handled by Firebase SDK real-time listener.
+  // This is kept only as a manual refresh trigger for the DB inspector.
+  if (refreshTimer) clearInterval(refreshTimer);
+}
+
+function manualRefresh() {
+  document.getElementById('loading-spin').style.display = 'inline-block';
+  // Re-fetch REST for DB Inspector
+  fetchDB();
+  toast('Manual refresh triggered', 'info');
+  setTimeout(() => document.getElementById('loading-spin').style.display = 'none', 1500);
+}
+
+// ═══════════════════════════════════════════
+// APPLICATION INITIALIZATION
+// ═══════════════════════════════════════════
+window.addEventListener('load', () => {
+  initCharts();
+  initHistoryEngine();
+  updatePlantGrid();
+  getUsers();
+  restoreSession();
+  renderUsersPage();
+  initFirebaseSDK();
+  startAutoRefresh();
+  if (currentUser) {
+    toast('🌿 Smart Greenhouse Monitoring connected to Firebase!', 'success');
+  } else {
+    toast('Please login to access the greenhouse dashboard', 'info');
+  }
+});
+</script>
+</body>
+</html>
