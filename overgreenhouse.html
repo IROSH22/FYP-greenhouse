@@ -476,7 +476,7 @@
         <button class="btn p" onclick="resetUserForm()">➕ Add Farmer</button>
         <button class="btn s" onclick="renderUsersPage()">🔄 Refresh List</button>
       </div>
-      <div class="g2">
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:24px">
         <div class="card">
           <div class="ch"><span class="ct">👤 Farmer Account Form</span></div>
           <div class="cb">
@@ -506,10 +506,10 @@
             </div>
           </div>
         </div>
-        <div class="card">
+        <div class="card" style="overflow:visible">
           <div class="ch"><span class="ct">🧑‍🌾 Farmer Accounts</span></div>
-          <div class="cb">
-            <table class="dt">
+          <div class="cb" style="overflow-x:auto;padding:0">
+            <table class="dt" style="min-width:600px">
               <thead>
                 <tr><th>Username</th><th>Name</th><th>Role</th><th>Email</th><th>Location</th><th>Actions</th></tr>
               </thead>
