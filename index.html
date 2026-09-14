@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Greenhouse Monitoring</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="auth-logged-out">
+
+<!-- Components loaded dynamically here via JS -->
+<div id="login-container"></div>
+<div id="app-shell">
+    <div id="sidebar-container"></div>
+    <div id="main">
+        <div id="topbar">
+            <div class="tb-l">
+                <div>
+                    <div class="tb-title" id="ptitle">Dashboard</div>
+                    <div class="tb-sub" id="psub">Live telemetry from Firebase Realtime Database</div>
+                </div>
+            </div>
+            <div class="tb-r">
+                <div class="live-ind" id="live-ind">
+                    <div class="ring"></div>
+                    <span id="live-txt">Connecting Firebase...</span>
+                </div>
+                <div class="icon-btn" onclick="go('alerts')" title="Alerts">🔔<div class="n-dot" id="nd">0</div></div>
+                <div class="icon-btn" onclick="manualRefresh()" title="Refresh">🔄</div>
+                <div class="user-chip" id="user-chip"><span class="dot"></span><span id="user-chip-name">Guest</span></div>
+                <button class="btn s" onclick="logoutUser()" style="padding:7px 12px;font-size:11px">🚪 Logout</button>
+                <div class="avi" title="Greenhouse Admin">GH</div>
+            </div>
+        </div>
+        <div id="content">
+            <!-- Pages (dashboard, analytics, etc) loaded dynamically here -->
+        </div>
+    </div>
+</div>
+<div id="tc"></div>
+
+<script src="js/app.js"></script>
+</body>
+</html>

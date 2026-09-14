@@ -1,0 +1,57 @@
+<div class="page" id="page-settings">
+      <div class="tabs">
+        <button class="tab active" onclick="sTab(this,'g')">⚙️ General</button>
+        <button class="tab" onclick="sTab(this,'fb')">🔥 Firebase Config</button>
+        <button class="tab" onclick="sTab(this,'n')">🔔 Notifications</button>
+        <button class="tab" onclick="sTab(this,'p')">👤 Admin Profile</button>
+      </div>
+      <div id="st-g">
+        <div class="card"><div class="ch"><span class="ct">System Settings</span></div><div class="cb">
+          <div class="g2">
+            <div><div class="fg"><label class="fl">System Name</label><input class="fi" value="Smart Greenhouse Monitoring System"></div></div>
+            <div><div class="fg"><label class="fl">Location</label><input class="fi" value="Greenhouse Bay 1 - Kelaniya Engineering"></div></div>
+            <div><div class="fg"><label class="fl">Timezone</label><select class="fi"><option>Asia/Colombo (UTC+5:30)</option><option>UTC</option></select></div></div>
+            <div><div class="fg"><label class="fl">Live Auto-Sync Rate</label><select class="fi" id="ref-sel" onchange="setRefRate(this.value)"><option value="3000">Every 3s</option><option value="5000">Every 5s</option><option value="10000">Every 10s</option></select></div></div>
+          </div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer" onclick="toast('General settings saved','success')">💾 Save Settings</button>
+        </div></div>
+      </div>
+      <div id="st-fb" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">🔥 Direct Firebase Realtime Database Endpoint</span></div><div class="cb">
+          <div class="fg"><label class="fl">Firebase Database URL</label><input class="fi" id="fb-url-inp" value="https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app"></div>
+          <div class="fg"><label class="fl">REST API Endpoint</label><input class="fi" value="https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app/.json" readonly style="background:#f8faf8"></div>
+          <div class="fg"><label class="fl">Project ID</label><input class="fi" value="greenhouse-monitor-e40fa" readonly style="background:#f8faf8"></div>
+          <div class="fg"><label class="fl">Database Root Path</label><input class="fi" id="fb-path-inp" value="/" placeholder="/livedata"></div>
+          <div style="background:var(--g8);border-radius:8px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--muted)">
+            ℹ️ Direct browser REST API synchronization without AI server proxying.
+          </div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer" onclick="applyFBConfig()">🔗 Re-Connect Firebase</button>
+        </div></div>
+      </div>
+      <div id="st-n" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">Alert Notifications</span></div><div class="cb">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:600">In-App Popups & Toasts</div><div style="font-size:11px;color:var(--muted)">Show real-time alerts on screen</div></div><label class="tog"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border)"><div><div style="font-size:13px;font-weight:600">Smoke & High Temp Critical Alarms</div><div style="font-size:11px;color:var(--muted)">High priority audio & banner triggers</div></div><label class="tog"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer;margin-top:16px" onclick="toast('Notification settings saved','success')">💾 Save Preferences</button>
+        </div></div>
+      </div>
+      <div id="st-p" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">User Profile</span></div><div class="cb">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+            <div class="avi" style="width:58px;height:58px;font-size:20px">GH</div>
+            <div><div style="font-size:16px;font-weight:700">Greenhouse Administrator</div><div style="font-size:12px;color:var(--muted)">Primary Operator</div><span class="badge g" style="margin-top:4px">System Admin</span></div>
+          </div>
+          <div class="g2">
+            <div><div class="fg"><label class="fl">Operator Name</label><input class="fi" value="Greenhouse Administrator"></div></div>
+            <div><div class="fg"><label class="fl">Email Address</label><input class="fi" type="email" value="admin@greenhouse-monitor.com"></div></div>
+          </div>
+          <button class="save-btn" style="background:var(--g2);color:#fff;padding:9px 18px;border:none;border-radius:8px;font-weight:600;cursor:pointer" onclick="toast('Profile updated','success')">💾 Update Profile</button>
+        </div></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="tc">
+</div>

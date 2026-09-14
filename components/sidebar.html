@@ -1,0 +1,38 @@
+<div id="sidebar">
+  <div class="sb-logo">
+    <div class="leaf">🌿</div>
+    <div class="sb-logo-text">
+      <span>Greenhouse AI</span>
+      <small>Smart Realtime System</small>
+    </div>
+  </div>
+  <nav class="sb-nav">
+    <div class="nav-grp">Monitor</div>
+    <div class="nav-item active" onclick="go('dashboard')"><span class="ico">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="go('analytics')"><span class="ico">📈</span> Analytics</div>
+    <div class="nav-item" onclick="go('plants')"><span class="ico">🌱</span> Plant Status</div>
+    <div class="nav-item" onclick="go('environment')"><span class="ico">🌡️</span> Environment</div>
+    <div class="nav-item" onclick="go('alerts')"><span class="ico">🔔</span> Alerts <span class="nav-badge" id="ab">0</span></div>
+    <div class="nav-item" onclick="go('disease')"><span class="ico">🔬</span> Disease Check</div>
+
+    <div class="nav-grp" id="nav-grp-operations">Operations</div>
+    <div class="nav-item" onclick="go('controls')" id="nav-controls"><span class="ico">🎛️</span> Controls</div>
+    <div class="nav-item" onclick="go('database')" id="nav-database"><span class="ico">🗄️</span> Database</div>
+    <div class="nav-item" onclick="go('settings')" id="nav-settings"><span class="ico">⚙️</span> Settings</div>
+
+    <div class="nav-grp" id="nav-grp-admin">Admin</div>
+    <div class="nav-item" onclick="go('users')" id="nav-users"><span class="ico">👥</span> Farmers</div>
+  </nav>
+  <div class="sb-bottom">
+    <div class="sim-pill live" id="mode-pill">
+      <div class="pill-dot live" id="pill-dot"></div>
+      <span id="pill-txt">🔴 Live Firebase</span>
+    </div>
+    <div style="margin-top:12px;padding:8px 2px;border-top:1px solid rgba(255,255,255,0.15)">
+      <button class="btn s" onclick="checkFirebaseConnection()" style="width:100%;justify-content:center;font-size:11px;padding:6px">🔄 Check Connection Firebase</button>
+    </div>
+    <div style="margin-top:8px;font-size:10.5px;color:rgba(255,255,255,.5);padding:0 2px">
+      Auto-Sync: <span id="ref-rate">3s</span> | History: <b>5m</b>
+    </div>
+  </div>
+</div>

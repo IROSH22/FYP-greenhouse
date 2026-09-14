@@ -1,0 +1,12 @@
+<div class="page" id="page-alerts">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+        <button class="btn p" onclick="fAlert('all',this)">All Alerts</button>
+        <button class="btn s" onclick="fAlert('critical',this)">🔴 Critical</button>
+        <button class="btn s" onclick="fAlert('warning',this)">🟡 Warning</button>
+        <button class="btn s" onclick="fAlert('info',this)">🔵 Info</button>
+        <button class="btn s" style="margin-left:auto" onclick="ackAll()">✅ Acknowledge All</button>
+      </div>
+      <div class="card"><div class="cb" id="alert-list" style="padding:14px"></div></div>
+    </div>
+
+    <!-- 7. FARMERS / USERS MANAGEMENT PAGE -->

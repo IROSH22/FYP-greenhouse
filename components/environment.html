@@ -1,0 +1,43 @@
+<div class="page" id="page-environment">
+      <div class="tabs">
+        <button class="tab active" onclick="envT(this,'rt')">📡 Real-Time Sensors</button>
+        <button class="tab" onclick="envT(this,'npk')">🌱 NPK Nutrients</button>
+        <button class="tab" onclick="envT(this,'thr')">⚙️ Safety Thresholds</button>
+      </div>
+      <div id="et-rt">
+        <div class="g2">
+          <div class="card"><div class="ch"><span class="ct">🌡️ Temperature (DHT11)</span><span style="font-size:18px;font-weight:800;color:var(--g2)" id="env-T">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecT">Temperature chart</canvas></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">💧 Humidity (DHT11)</span><span style="font-size:18px;font-weight:800;color:var(--info)" id="env-H">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecH">Humidity chart</canvas></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">☀️ LDR Light Sensor</span><span style="font-size:18px;font-weight:800;color:#f59e0b" id="env-L">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecL">Light chart</canvas></div></div></div>
+          <div class="card"><div class="ch"><span class="ct">💨 CO₂ Air Quality (MQ-135)</span><span style="font-size:18px;font-weight:800;color:#8b5cf6" id="env-C">—</span></div><div class="cb"><div style="height:160px"><canvas id="ecC">CO2 chart</canvas></div></div></div>
+        </div>
+      </div>
+      <div id="et-npk" style="display:none">
+        <div class="card">
+          <div class="ch"><span class="ct">🌱 RS-485 NPK Soil Nutrient Readings</span><span class="badge b">Modbus Sensor</span></div>
+          <div class="cb">
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px;text-align:center;margin-bottom:20px">
+              <div style="background:var(--g8);padding:16px;border-radius:10px"><div style="font-size:12px;color:var(--muted);font-weight:700">NITROGEN (N)</div><div style="font-size:32px;font-weight:800;color:#22c55e" id="npk-n-lg">85 mg/kg</div><div style="font-size:11px;color:var(--muted)">Target: 50–150 mg/kg</div></div>
+              <div style="background:var(--g8);padding:16px;border-radius:10px"><div style="font-size:12px;color:var(--muted);font-weight:700">PHOSPHORUS (P)</div><div style="font-size:32px;font-weight:800;color:#f59e0b" id="npk-p-lg">42 mg/kg</div><div style="font-size:11px;color:var(--muted)">Target: 30–80 mg/kg</div></div>
+              <div style="background:var(--g8);padding:16px;border-radius:10px"><div style="font-size:12px;color:var(--muted);font-weight:700">POTASSIUM (K)</div><div style="font-size:32px;font-weight:800;color:#3b82f6" id="npk-k-lg">120 mg/kg</div><div style="font-size:11px;color:var(--muted)">Target: 50–200 mg/kg</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="et-thr" style="display:none">
+        <div class="card"><div class="ch"><span class="ct">Environment Threshold Settings</span></div>
+        <div class="cb">
+          <div class="g2">
+            <div><div class="fg"><label class="fl">Max Temp → Fan ON (°C)</label><input class="fi" type="number" id="t-max-inp" value="26"></div></div>
+            <div><div class="fg"><label class="fl">Min Humidity → Fan ON (%)</label><input class="fi" type="number" id="h-min-inp" value="50"></div></div>
+            <div><div class="fg"><label class="fl">Soil Moisture → Pump ON (%)</label><input class="fi" type="number" id="s-min-inp" value="30"></div></div>
+            <div><div class="fg"><label class="fl">LDR → Lights ON (lux)</label><input class="fi" type="number" id="l-min-inp" value="500"></div></div>
+            <div><div class="fg"><label class="fl">Smoke Alert (ppm)</label><input class="fi" type="number" id="smoke-max-inp" value="700"></div></div>
+            <div><div class="fg"><label class="fl">CO₂ Danger Alert (ppm)</label><input class="fi" type="number" id="co2-max-inp" value="1000"></div></div>
+          </div>
+          <button class="save-btn" onclick="saveThresholds()">💾 Save Thresholds to Firebase</button>
+        </div></div>
+      </div>
+    </div>
+
+    <!-- 5. CONTROLS PAGE -->

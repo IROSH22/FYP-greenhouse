@@ -1,0 +1,16 @@
+<div class="page" id="page-plants">
+      <div class="st">6x Soil Moisture Sensors (Plant Management)</div>
+      <div style="display:flex;gap:10px;margin-bottom:18px">
+        <input class="fi" type="text" placeholder="🔍 Search plants…" style="max-width:240px" oninput="filterP(this.value)">
+        <select class="fi" style="width:140px" onchange="filterPS(this.value)">
+          <option value="">All Status</option><option value="ok">OK (Moist)</option><option value="dry">DRY (Needs Water)</option><option value="wet">WET (High Moisture)</option>
+        </select>
+      </div>
+      <div class="pg" id="plant-grid"></div>
+      <div class="card" style="margin-top:20px">
+        <div class="ch"><span class="ct">📊 Soil Moisture Sensor Comparison (Sensors 1 – 6)</span></div>
+        <div class="cb"><div style="position:relative;height:220px"><canvas id="soilBarChart">Soil bar chart</canvas></div></div>
+      </div>
+    </div>
+
+    <!-- 4. ENVIRONMENT PAGE -->

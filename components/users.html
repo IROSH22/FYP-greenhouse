@@ -1,0 +1,50 @@
+<div class="page" id="page-users">
+      <div class="qa">
+        <button class="btn p" onclick="resetUserForm()">➕ Add Farmer</button>
+        <button class="btn s" onclick="renderUsersPage()">🔄 Refresh List</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:24px">
+        <div class="card">
+          <div class="ch"><span class="ct">👤 Farmer Account Form</span></div>
+          <div class="cb">
+            <div class="fg">
+              <label class="fl">Full Name</label>
+              <input class="fi" id="user-fullname" placeholder="Farmer name">
+            </div>
+            <div class="fg">
+              <label class="fl">Username</label>
+              <input class="fi" id="user-username" placeholder="Username">
+            </div>
+            <div class="fg">
+              <label class="fl">Email</label>
+              <input class="fi" id="user-email" placeholder="farmer@email.com">
+            </div>
+            <div class="fg">
+              <label class="fl">Password</label>
+              <input class="fi" id="user-password" placeholder="Temporary password">
+            </div>
+            <div class="fg">
+              <label class="fl">Location</label>
+              <input class="fi" id="user-location" placeholder="Farm location">
+            </div>
+            <div class="qa">
+              <button class="btn p" onclick="saveUserFromForm()">💾 Save Farmer</button>
+              <button class="btn s" onclick="resetUserForm()">↺ Clear</button>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="overflow:visible">
+          <div class="ch"><span class="ct">🧑‍🌾 Farmer Accounts</span></div>
+          <div class="cb" style="overflow-x:auto;padding:0">
+            <table class="dt" style="min-width:600px">
+              <thead>
+                <tr><th>Username</th><th>Name</th><th>Role</th><th>Email</th><th>Location</th><th>Actions</th></tr>
+              </thead>
+              <tbody id="user-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7. FIREBASE DATABASE PAGE -->
