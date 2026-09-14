@@ -1,0 +1,58 @@
+<div class="page" id="page-controls">
+      <div class="g2">
+        <div class="card">
+          <div class="ch"><span class="ct">🎛️ Manual Actuator Override (Write to Firebase)</span><span class="badge y">Direct Firebase Control</span></div>
+          <div class="cb" style="display:grid;gap:14px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🌀</span><div><div style="font-size:13.5px;font-weight:700">Fan (Pin 53)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: Temp > 26°C or Humidity < 50%</div></div></div>
+                <div style="display:flex;align-items:center;gap:10px"><div id="cf-mode" onclick="setMode('fan','AUTO')" style="display:none;font-size:11px;color:var(--p1);cursor:pointer;margin-right:10px;font-weight:600">Reset AUTO</div><span class="ac-st" id="cf-st">--</span><label class="tog"><input type="checkbox" id="cf" onchange="setAct('fan',this)"><div class="tog-t"><div class="tog-k"></div></div></label></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🪟</span><div><div style="font-size:13.5px;font-weight:700">Window Servo (Pin 52)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: Temp > 26°C or Smoke > 700ppm</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px"><div id="cw-mode" onclick="setMode(\'window\',\'AUTO\')" style="display:none;font-size:11px;color:var(--p1);cursor:pointer;margin-right:10px;font-weight:600">Reset AUTO</div><span class="ac-st" id="cw-st">--</span><label class="tog"><input type="checkbox" id="cw" onchange="setAct('window',this)"><div class="tog-t"><div class="tog-k"></div></div></label></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">💡</span><div><div style="font-size:13.5px;font-weight:700">Grow Lights Relay (Pin 51)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: LDR < 500 lux</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px"><div id="cl-mode" onclick="setMode(\'light\',\'AUTO\')" style="display:none;font-size:11px;color:var(--p1);cursor:pointer;margin-right:10px;font-weight:600">Reset AUTO</div><span class="ac-st" id="cl-st">--</span><label class="tog"><input type="checkbox" id="cl" onchange="setAct('lights',this)"><div class="tog-t"><div class="tog-k"></div></div></label></div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:14px;background:var(--g8);border-radius:10px;border:1px solid var(--g7)">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">💦</span><div><div style="font-size:13.5px;font-weight:700">Water Pump Relay (Pin 49)</div><div style="font-size:11px;color:var(--muted)">Auto Trigger: Moisture < 30%</div></div></div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <select class="fi" style="width:75px;padding:4px 6px;font-size:11px" id="pump-dur"><option value="3">3s</option><option value="5">5s</option><option value="10">10s</option></select>
+                <button class="btn p" style="padding:6px 12px;font-size:11px" onclick="runPump()">Run Pulse</button>
+              </div>
+            </div>
+            <div style="padding:14px;background:#fee2e2;border-radius:10px;border:1px solid #fca5a5;display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🔊</span><div><div style="font-size:13.5px;font-weight:700;color:#991b1b">Emergency Alarm Buzzer (Pin 46)</div><div style="font-size:11px;color:#7f1d1d">Triggers automatically on Smoke > 700 ppm</div></div></div>
+              <div style="display:flex;gap:8px"><button class="btn s" style="padding:5px 10px;font-size:11px" onclick="toast('Buzzer test signal sent','warning')">Test</button><button class="btn d" style="padding:5px 10px;font-size:11px" onclick="toast('Buzzer silenced','info')">Silence</button></div>
+            </div>
+          </div>
+          <div style="padding:18px;border-top:1px solid var(--border)"><button class="btn d" style="width:100%;justify-content:center" onclick="eStop()">🛑 EMERGENCY STOP ALL ACTUATORS</button></div>
+        </div>
+
+        <div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="ch"><span class="ct">⏰ Automation Timers & Schedules</span></div>
+            <div class="cb" style="display:grid;gap:12px">
+              <div style="background:var(--g8);border-radius:9px;padding:12px;border:1px solid var(--g7)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:700">💡 Grow Lights Schedule</span><label class="tog" style="transform:scale(.85)"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+                <div class="g2" style="gap:8px;margin:0"><div><label class="fl">Turn ON</label><input class="fi" type="time" value="06:00"></div><div><label class="fl">Turn OFF</label><input class="fi" type="time" value="18:00"></div></div>
+              </div>
+              <div style="background:var(--g8);border-radius:9px;padding:12px;border:1px solid var(--g7)">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:13px;font-weight:700">💧 Automated Irrigation Interval</span><label class="tog" style="transform:scale(.85)"><input type="checkbox" checked><div class="tog-t"><div class="tog-k"></div></div></label></div>
+                <div><label class="fl">Repeat Interval</label><select class="fi"><option>Every 30 Minutes</option><option>Every 1 Hour</option><option>Every 2 Hours</option><option>Every 6 Hours</option></select></div>
+              </div>
+              <button class="save-btn" onclick="toast('Schedules saved to Firebase','success')">💾 Save Automation Schedules</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="ch"><span class="ct">📋 Actuator Execution Log</span></div>
+            <div style="max-height:210px;overflow-y:auto">
+              <table class="dt"><thead><tr><th>Time</th><th>Action</th><th>User / Mode</th></tr></thead><tbody id="ctrl-log"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. ALERTS PAGE -->

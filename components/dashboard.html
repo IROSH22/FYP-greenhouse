@@ -1,0 +1,142 @@
+<div class="page active" id="page-dashboard">
+      <div class="dashboard-topbar">
+        Firebase DB: <b id="fb-url-disp" class="db-pill">greenhouse-monitor-e40fa</b> · Last Timestamp: <b id="lut">—</b> <span class="spin" id="loading-spin"></span>
+      </div>
+
+      <div class="qa" id="dashboard-actions">
+        <button class="btn p" onclick="waterAll()">💧 Water All Plants</button>
+        <button class="btn d" onclick="eStop()">🛑 Emergency Stop</button>
+        <button class="btn s" onclick="manualRefresh()">🔄 Refresh</button>
+        <button class="btn s" onclick="triggerHistorySnapshot()">📸 Save Snapshot</button>
+      </div>
+      <div id="farmer-mode-banner" class="auth-note dashboard-banner">Monitoring-only mode: you can view live greenhouse data and alerts, but control actions are disabled for your account.</div>
+
+      <div class="st">Live Environmental Sensors</div>
+      <div class="e5">
+        <div class="ec">
+          <div class="ec-bg">🌡️</div>
+          <div class="ec-lbl">Temperature</div>
+          <div class="ec-val" id="e-temp">—</div>
+          <div class="ec-unit">°C</div>
+          <div class="ec-status" id="e-temp-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-temp" style="width:0;background:linear-gradient(90deg,#22c55e,#4ade80)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">💧</div>
+          <div class="ec-lbl">Humidity</div>
+          <div class="ec-val" id="e-hum">—</div>
+          <div class="ec-unit">%</div>
+          <div class="ec-status" id="e-hum-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-hum" style="width:0;background:linear-gradient(90deg,#3b82f6,#60a5fa)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">💨</div>
+          <div class="ec-lbl">CO₂ Level</div>
+          <div class="ec-val" id="e-co2">—</div>
+          <div class="ec-unit">ppm</div>
+          <div class="ec-status" id="e-co2-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-co2" style="width:0;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">🔥</div>
+          <div class="ec-lbl">Smoke (MQ-135)</div>
+          <div class="ec-val" id="e-smoke">—</div>
+          <div class="ec-unit">ppm</div>
+          <div class="ec-status" id="e-smoke-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-smoke" style="width:0;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div>
+        </div>
+        <div class="ec">
+          <div class="ec-bg">☀️</div>
+          <div class="ec-lbl">LDR Light</div>
+          <div class="ec-val" id="e-ldr">—</div>
+          <div class="ec-unit">lux</div>
+          <div class="ec-status" id="e-ldr-st">—</div>
+          <div class="ec-bar"><div class="ec-fill" id="eb-ldr" style="width:0;background:linear-gradient(90deg,#f59e0b,#fcd34d)"></div></div>
+        </div>
+      </div>
+
+      <!-- Live Soil Moisture Sensors 1 through 6 -->
+      <div class="st">Soil Moisture Status</div>
+      <div class="soil6-grid" id="dash-soil-grid">
+        <!-- Rendered dynamically -->
+      </div>
+
+      
+      <!-- Live Sensor Output -->
+      <div class="st" style="margin-top:20px;">Live Sensor Output (ESP32)</div>
+      <div class="e5" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+        <div class="card" style="padding:15px;text-align:center;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600">SENSOR FAN</div>
+          <div id="esp-fan-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
+        </div>
+        <div class="card" style="padding:15px;text-align:center;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600">SENSOR PUMP</div>
+          <div id="esp-pump-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
+        </div>
+        <div class="card" style="padding:15px;text-align:center;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600">SENSOR WINDOW</div>
+          <div id="esp-win-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
+        </div>
+        <div class="card" style="padding:15px;text-align:center;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600">SENSOR LIGHT</div>
+          <div id="esp-light-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
+        </div>
+      </div>
+
+      <!-- Live Actuator Status -->
+
+      <div class="st">Live Equipment Status</div>
+      <div class="a4">
+        <div class="ac" id="act-fan-card">
+          <span class="ac-ico">🌀</span>
+          <div class="ac-name">Fan Status</div>
+          <label class="tog"><input type="checkbox" id="act-fan" onchange="setAct('fan',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-fan-st">OFF</div>
+          <div id="act-fan-mode" onclick="setMode('fan', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
+        </div>
+        <div class="ac" id="act-pump-card">
+          <span class="ac-ico">💦</span>
+          <div class="ac-name">Pump Status</div>
+          <label class="tog"><input type="checkbox" id="act-pump" onchange="setAct('pump',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-pump-st">OFF</div>
+          <div id="act-pump-mode" onclick="setMode('pump', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
+        </div>
+        <div class="ac" id="act-win-card">
+          <span class="ac-ico">🪟</span>
+          <div class="ac-name">Window Status</div>
+          <label class="tog"><input type="checkbox" id="act-win" onchange="setAct('window',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-win-st">CLOSED</div>
+          <div id="act-win-mode" onclick="setMode('window', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
+        </div>
+        <div class="ac" id="act-light-card">
+          <span class="ac-ico">💡</span>
+          <div class="ac-name">Light Status</div>
+          <label class="tog"><input type="checkbox" id="act-light" onchange="setAct('light',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+          <div class="ac-st off" id="act-light-st">OFF</div>
+          <div id="act-light-mode" onclick="setMode('light', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
+        </div>
+      </div>
+
+      <!-- Live Trend Chart & Alerts -->
+      <div class="t2">
+        <div class="card">
+          <div class="ch">
+            <span class="ct">📉 Real-Time Sensor Telemetry Trend</span>
+            <select class="fi" style="width:130px;padding:4px 8px;font-size:11.5px" onchange="switchChart(this.value)">
+              <option value="temperature">Temperature</option>
+              <option value="humidity">Humidity</option>
+              <option value="co2">CO₂ Level</option>
+              <option value="smoke">Smoke</option>
+              <option value="ldr">Light (LDR)</option>
+            </select>
+          </div>
+          <div class="cb"><div style="position:relative;height:210px"><canvas id="mainChart">Live chart</canvas></div></div>
+        </div>
+        <div class="card">
+          <div class="ch"><span class="ct">🔔 Recent Real-Time Alerts</span><span style="font-size:11px;color:var(--muted);cursor:pointer" onclick="go('alerts')">View All →</span></div>
+          <div class="cb" id="alert-feed" style="padding:10px 14px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. ANALYTICS PAGE (Strictly driven by 5-min History Records) -->

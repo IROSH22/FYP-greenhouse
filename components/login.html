@@ -1,0 +1,53 @@
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-head">
+      <h1>Greenhouse Access Portal</h1>
+      <p>Login to view live monitoring, analytics, disease detection and manage farmer accounts.</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="showAuthTab('login')">🔐 Login</button>
+      <button class="auth-tab" onclick="showAuthTab('register')">📝 Register</button>
+    </div>
+    <form id="login-form" class="auth-form active" onsubmit="event.preventDefault(); doLogin();">
+      <div class="auth-field">
+        <label>Username</label>
+        <input id="login-username" placeholder="Enter username" required>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input id="login-password" type="password" placeholder="Enter password" required>
+      </div>
+      <div class="auth-actions">
+        <small>Default admin: admin / admin</small>
+        <button class="btn p" type="submit">Login</button>
+      </div>
+    </form>
+    <form id="register-form" class="auth-form" onsubmit="event.preventDefault(); doRegister();">
+      <div class="auth-field">
+        <label>Full Name</label>
+        <input id="reg-name" placeholder="Farmer name" required>
+      </div>
+      <div class="auth-field">
+        <label>Username</label>
+        <input id="reg-username" placeholder="Choose username" required>
+      </div>
+      <div class="auth-field">
+        <label>Email</label>
+        <input id="reg-email" type="email" placeholder="farmer@email.com" required>
+      </div>
+      <div class="auth-field">
+        <label>Password</label>
+        <input id="reg-password" type="password" placeholder="Create password" required>
+      </div>
+      <div class="auth-field">
+        <label>Location</label>
+        <input id="reg-location" placeholder="Farm location">
+      </div>
+      <div class="auth-actions">
+        <small>New accounts are created as farmers.</small>
+        <button class="btn p" type="submit">Create Account</button>
+      </div>
+    </form>
+    <div class="auth-note">Use the admin account for full farmer management and system control. Farmers can monitor greenhouse data after login.</div>
+  </div>
+</div>
