@@ -543,10 +543,8 @@ liveData.fanMode = data.fanMode ?? 'AUTO';
   liveData.soil4 = parseNum(getValueByAliases(source, ['soil4','soilSensor4','soilmoisture4','moisture4'])) ?? liveData.soil4;
   liveData.soil5 = parseNum(getValueByAliases(source, ['soil5','soilSensor5','soilmoisture5','moisture5'])) ?? liveData.soil5;
   liveData.soil6 = parseNum(getValueByAliases(source, ['soil6','soilSensor6','soilmoisture6','moisture6'])) ?? liveData.soil6;
+  liveData.npk = source.npk || {};
   // Just read the NPK values. If they are missing in the live payload, fallback to the existing state.
-  liveData.npk_n = parseNum(getValueByAliases(source, ['npk_n','nitrogen','n'])) ?? liveData.npk_n;
-  liveData.npk_p = parseNum(getValueByAliases(source, ['npk_p','phosphorus','p'])) ?? liveData.npk_p;
-  liveData.npk_k = parseNum(getValueByAliases(source, ['npk_k','potassium','k'])) ?? liveData.npk_k;
 
   const hasAnyLiveValue = [liveData.temperature, liveData.humidity, liveData.co2, liveData.smoke, liveData.ldr, liveData.soil1].some(v => v !== null && v !== undefined);
   if (!hasAnyLiveValue && source && typeof source === 'object') {
@@ -602,9 +600,7 @@ liveData.fanMode = data.fanMode ?? 'AUTO';
           soil4: parseNum(item.soil4) ?? parseNum(item.soilSensor4) ?? null,
           soil5: parseNum(item.soil5) ?? parseNum(item.soilSensor5) ?? null,
           soil6: parseNum(item.soil6) ?? parseNum(item.soilSensor6) ?? null,
-          npk_n: parseNum(item.npk_n) ?? null,
-          npk_p: parseNum(item.npk_p) ?? null,
-          npk_k: parseNum(item.npk_k) ?? null,
+          npk: item.npk || {},
           fanStatus: normalizeStatus(item.fanStatus, 'OFF'),
           pumpStatus: normalizeStatus(item.pumpStatus, 'OFF'),
           windowStatus: normalizeStatus(item.windowStatus, 'CLOSED'),
@@ -699,10 +695,13 @@ function updateDashboardSensors() {
   setTxt('env-L', ldr !== null ? Math.round(ldr)+' lux' : '—');
   setTxt('env-C', co2 !== null ? Math.round(co2)+' ppm' : '—');
 
-  // NPK Sensor UI
-  setTxt('npk-n-lg', liveData.npk_n !== null ? Math.round(liveData.npk_n) + ' mg/kg' : '—');
-  setTxt('npk-p-lg', liveData.npk_p !== null ? Math.round(liveData.npk_p) + ' mg/kg' : '—');
-  setTxt('npk-k-lg', liveData.npk_k !== null ? Math.round(liveData.npk_k) + ' mg/kg' : '—');
+  // NPK Sensor UI (6 Pots)
+  for (let i = 1; i <= 6; i++) {
+    const pNpk = liveData.npk && liveData.npk[i] ? liveData.npk[i] : {};
+    setTxt(`npk-${i}-n`, pNpk.N !== undefined ? Math.round(pNpk.N) + ' mg/kg' : '-');
+    setTxt(`npk-${i}-p`, pNpk.P !== undefined ? Math.round(pNpk.P) + ' mg/kg' : '-');
+    setTxt(`npk-${i}-k`, pNpk.K !== undefined ? Math.round(pNpk.K) + ' mg/kg' : '-');
+  }
 
   // Render 6x Soil Moisture Sensors Grid
   const soilGrid = document.getElementById('dash-soil-grid');
@@ -788,9 +787,7 @@ function triggerHistorySnapshot() {
     co2: liveData.co2,
     smoke: liveData.smoke,
     ldr: liveData.ldr,
-    npk_n: liveData.npk_n,
-    npk_p: liveData.npk_p,
-    npk_k: liveData.npk_k,
+    npk: liveData.npk || {},
     fanStatus: liveData.fanStatus ? 'ON' : 'OFF',
     pumpStatus: liveData.pumpStatus ? 'ON' : 'OFF',
     windowStatus: liveData.windowStatus ? 'OPEN' : 'CLOSED',
@@ -835,9 +832,14 @@ function initHistoryEngine() {
         co2: Math.round(520 + i*8 + (Math.random()*20 - 10)),
         smoke: Math.round(170 + (Math.random()*15)),
         ldr: Math.round(700 + Math.sin(i)*100),
-        npk_n: Math.round(80 + Math.sin(i)*10),
-        npk_p: Math.round(40 + Math.cos(i)*5),
-        npk_k: Math.round(110 + Math.sin(i)*15),
+        npk: {
+          1: { N: Math.round(80 + Math.sin(i)*10), P: Math.round(40 + Math.cos(i)*5), K: Math.round(110 + Math.sin(i)*15) },
+          2: { N: Math.round(85 + Math.sin(i)*10), P: Math.round(38 + Math.cos(i)*5), K: Math.round(112 + Math.sin(i)*15) },
+          3: { N: Math.round(82 + Math.sin(i)*10), P: Math.round(42 + Math.cos(i)*5), K: Math.round(115 + Math.sin(i)*15) },
+          4: { N: Math.round(88 + Math.sin(i)*10), P: Math.round(41 + Math.cos(i)*5), K: Math.round(108 + Math.sin(i)*15) },
+          5: { N: Math.round(79 + Math.sin(i)*10), P: Math.round(45 + Math.cos(i)*5), K: Math.round(105 + Math.sin(i)*15) },
+          6: { N: Math.round(90 + Math.sin(i)*10), P: Math.round(39 + Math.cos(i)*5), K: Math.round(120 + Math.sin(i)*15) }
+        },
         fanStatus: i % 4 === 0 ? 'ON' : 'OFF',
         pumpStatus: 'OFF',
         windowStatus: 'CLOSED',
@@ -916,7 +918,7 @@ function renderAnalyticsPage() {
         <td>${parseNum(r.smoke) !== null ? Math.round(parseNum(r.smoke))+' ppm' : '—'}</td>
         <td>${parseNum(r.ldr) !== null ? Math.round(parseNum(r.ldr))+' lux' : '—'}</td>
         <td><b>${sAvg}%</b></td>
-        <td><b style="color:#22c55e">${parseNum(r.npk_n)||'-'}</b>, <b style="color:#f59e0b">${parseNum(r.npk_p)||'-'}</b>, <b style="color:#3b82f6">${parseNum(r.npk_k)||'-'}</b></td>
+        <td><span style="font-size:10px">See NPK Tab</span></td>
         <td><span class="badge ${fanStatus==='ON'?'g':'b'}">${fanStatus}</span></td>
         <td><span class="badge ${pumpStatus==='ON'?'g':'b'}">${pumpStatus}</span></td>
         <td><span class="badge ${windowStatus==='OPEN'?'g':'b'}">${windowStatus}</span></td>
@@ -993,9 +995,9 @@ function renderHistoryCharts() {
       data: {
         labels: labels,
         datasets: [
-          { label: 'Nitrogen (N) mg/kg', data: rev.map(r=>parseNum(r.npk_n)), borderColor: '#22c55e', tension: .3 },
-          { label: 'Phosphorus (P) mg/kg', data: rev.map(r=>parseNum(r.npk_p)), borderColor: '#f59e0b', tension: .3 },
-          { label: 'Potassium (K) mg/kg', data: rev.map(r=>parseNum(r.npk_k)), borderColor: '#3b82f6', tension: .3 }
+          { label: 'Pot 1 Nitrogen (N) mg/kg', data: rev.map(r=>(r.npk && r.npk[1] ? r.npk[1].N : null)), borderColor: '#22c55e', tension: .3 },
+          { label: 'Pot 1 Phosphorus (P) mg/kg', data: rev.map(r=>(r.npk && r.npk[1] ? r.npk[1].P : null)), borderColor: '#f59e0b', tension: .3 },
+          { label: 'Pot 1 Potassium (K) mg/kg', data: rev.map(r=>(r.npk && r.npk[1] ? r.npk[1].K : null)), borderColor: '#3b82f6', tension: .3 }
         ]
       },
       options: { responsive: true, maintainAspectRatio: false }
