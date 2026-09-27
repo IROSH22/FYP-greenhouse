@@ -14,14 +14,14 @@ let fbListenerRef = null;
 
 // Firebase SDK Config (from user's Firebase project)
 const firebaseConfig = {
-  apiKey: "AIzaSyDu-3H9SEWa1j_abFKQ26UJ4s0nhwA4_P0",
-  authDomain: "greenhouse-monitor-e40fa.firebaseapp.com",
-  databaseURL: "https://greenhouse-monitor-e40fa-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "greenhouse-monitor-e40fa",
-  storageBucket: "greenhouse-monitor-e40fa.firebasestorage.app",
-  messagingSenderId: "704436732093",
-  appId: "1:704436732093:web:ba88bb34045561c2f937d4",
-  measurementId: "G-VWQ3QJ96W0"
+  apiKey: "AIzaSyDPAekHef1hZrbNqdpKbUsu8zj22QLGqJU",
+  authDomain: "greenhouse-2-f2f3c.firebaseapp.com",
+  databaseURL: "https://greenhouse-2-f2f3c-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "greenhouse-2-f2f3c",
+  storageBucket: "greenhouse-2-f2f3c.firebasestorage.app",
+  messagingSenderId: "397853792448",
+  appId: "1:397853792448:web:ba81333a7f3d53d3803525",
+  measurementId: "G-D4W0N8TZ6X"
 };
 
 // Live telemetry state — all null initially (shows "—" until Firebase data arrives)
@@ -477,8 +477,16 @@ function formatTimestamp(value) {
 }
 
 function normalizeStatus(v, fallback = 'OFF') {
-  if (v === true || v === 'ON' || v === '1' || v === 1 || v === 'true') return 'ON';
-  if (v === false || v === 'OFF' || v === '0' || v === 0 || v === 'false') return 'OFF';
+  const isTruthy = (v === true || v === 'ON' || v === '1' || v === 1 || v === 'true' || v === 'OPEN');
+  const isFalsy = (v === false || v === 'OFF' || v === '0' || v === 0 || v === 'false' || v === 'CLOSED');
+  
+  if (fallback === 'CLOSED' || fallback === 'OPEN') {
+    if (isTruthy) return 'OPEN';
+    if (isFalsy) return 'CLOSED';
+  } else {
+    if (isTruthy) return 'ON';
+    if (isFalsy) return 'OFF';
+  }
   return fallback;
 }
 
@@ -624,15 +632,24 @@ liveData.fanMode = data.fanMode ?? 'AUTO';
 function parseNum(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === 'number') return v;
-  if (typeof v === 'string' && !isNaN(v)) return parseFloat(v);
+  if (typeof v === 'string') {
+    const s = v.toUpperCase().trim();
+    if (s === 'DRY') return 15;
+    if (s === 'WET') return 85;
+    if (s === 'OK' || s === 'NORMAL' || s === 'MEDIUM') return 50;
+    
+    const parsed = parseFloat(v);
+    if (!isNaN(parsed)) return parsed;
+  }
   return null;
 }
 
 function parseBool(v) {
   if (v === null || v === undefined) return null;
   if (typeof v === 'boolean') return v;
-  if (v === 'ON' || v === 'OPEN' || v === '1' || v === 1 || v === 'true') return true;
-  if (v === 'OFF' || v === 'CLOSED' || v === '0' || v === 0 || v === 'false') return false;
+  const str = String(v).toUpperCase().trim();
+  if (str === 'ON' || str === 'OPEN' || str === '1' || str === 'TRUE') return true;
+  if (str === 'OFF' || str === 'CLOSED' || str === '0' || str === 'FALSE') return false;
   return null;
 }
 
