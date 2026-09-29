@@ -1,43 +1,91 @@
 <div class="page" id="page-disease">
       <div class="g3" style="margin-bottom:20px">
-        <div class="card"><div class="astat-box"><div class="astat-val" style="color:var(--text)">32</div><div class="astat-lbl">TOTAL SCANS</div></div></div>
-        <div class="card"><div class="astat-box"><div class="astat-val" style="color:#22c55e">27</div><div class="astat-lbl">HEALTHY PLANTS</div></div></div>
-        <div class="card"><div class="astat-box"><div class="astat-val" style="color:#ef4444">5</div><div class="astat-lbl">DISEASES DETECTED</div></div></div>
+        <div class="card"><div class="astat-box"><div class="astat-val" id="disease-tot-scans" style="color:var(--text)">0</div><div class="astat-lbl">TOTAL SCANS (HISTORY)</div></div></div>
+        <div class="card"><div class="astat-box"><div class="astat-val" id="disease-healthy" style="color:#22c55e">6</div><div class="astat-lbl">HEALTHY PLANTS</div></div></div>
+        <div class="card"><div class="astat-box"><div class="astat-val" id="disease-sick" style="color:#ef4444">0</div><div class="astat-lbl">DISEASED PLANTS</div></div></div>
       </div>
-      <div class="g2">
+      
+      <div class="g2" style="margin-bottom:20px">
         <div class="card">
-          <div class="ch"><span class="ct">📷 Plant Leaf Disease AI Scanner</span></div>
+          <div class="ch"><span class="ct">📷 Live Camera Feed</span></div>
           <div class="cb">
-            <div class="upz" onclick="triggerDiseaseAnalysis()">
-              <div style="font-size:48px;margin-bottom:12px">🌿</div>
-              <div style="font-size:14px;font-weight:700;color:var(--g2);margin-bottom:4px">Upload / Drop Plant Leaf Photo</div>
-              <div style="font-size:11.5px;color:var(--muted);margin-bottom:14px">Supports JPG, PNG, WEBP leaf images</div>
-              <button class="btn p" onclick="event.stopPropagation();triggerDiseaseAnalysis()">🤖 Run AI Health Diagnostics</button>
-            </div>
-            <div class="fg" style="margin-top:14px">
-              <label class="fl">Select Plant Subject</label>
-              <select class="fi" id="disease-plant-sel"></select>
+            <div style="width:100%; height:250px; background:#000; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-direction:column; color:#555; font-size:12px">
+              <span style="font-size:32px; margin-bottom:10px;">📹</span>
+              <span>Live Camera Stream Offline</span>
+              <span>Waiting for video source...</span>
             </div>
           </div>
         </div>
+        
         <div class="card">
-          <div class="ch"><span class="ct">🔬 Diagnostic Results</span><span class="badge r" id="disease-badge">Analysis Ready</span></div>
+          <div class="ch"><span class="ct">🔬 Live Monitoring Diagnostic Status</span><span class="badge b" id="disease-badge">Scanning...</span></div>
           <div class="cb" id="disease-result-box">
-            <div style="background:#fee2e2;border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid #fca5a5">
-              <div style="font-size:15px;font-weight:800;color:#991b1b;margin-bottom:4px">🦠 Early Blight (Alternaria solani)</div>
-              <div style="font-size:11.5px;color:#7f1d1d;margin-bottom:8px">Confidence Score: <b>89.2%</b> · Severity: <b>Moderate</b></div>
-              <div style="font-size:11.5px;color:#991b1b">Plant 1 (Tomato) · Scanned just now</div>
+            <div style="background:var(--g8);border-radius:10px;padding:16px;margin-bottom:14px;border:1px solid var(--g7); text-align:center">
+              <div style="font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px">Monitoring in progress...</div>
+              <div style="font-size:11.5px;color:var(--muted);margin-bottom:8px">No immediate threats detected in current frame.</div>
             </div>
-            <div style="font-size:12.5px;font-weight:700;margin-bottom:6px">💊 Recommended Treatment Protocol</div>
+            <div style="font-size:12.5px;font-weight:700;margin-bottom:6px">Status Details</div>
             <div style="font-size:12px;color:var(--text);line-height:1.7;background:var(--g8);padding:12px;border-radius:8px;border:1px solid var(--g7)">
-              1. Prune affected bottom foliage immediately.<br>
-              2. Apply organic copper-based fungicide spray every 7 days.<br>
-              3. Maintain optimal fan ventilation to lower canopy humidity below 70%.
+              System is currently scanning live feed.<br>
+              Any detected diseases or anomalies will appear here.<br>
+              Awaiting data from backend AI models...
             </div>
-            <button class="btn p" style="width:100%;margin-top:14px;justify-content:center" onclick="toast('Treatment protocol saved to Firebase','success')">✅ Log Treatment Record</button>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- 9. SETTINGS PAGE -->
+      <div class="card" style="margin-bottom:20px">
+        <div class="ch"><span class="ct">🌿 Live Plant Disease Status (6 Plants)</span></div>
+        <div class="cb">
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:15px;" id="disease-plant-grid">
+                <!-- Dynamically populated or hardcoded for now -->
+                <div class="card" style="padding:15px; text-align:center; border: 1px solid #22c55e">
+                    <div style="font-size:12px; color:var(--muted); font-weight:600">Tomato Plant 1</div>
+                    <div style="font-size:16px; font-weight:700; color:#22c55e; margin-top:5px">Healthy</div>
+                </div>
+                <div class="card" style="padding:15px; text-align:center; border: 1px solid #22c55e">
+                    <div style="font-size:12px; color:var(--muted); font-weight:600">Tomato Plant 2</div>
+                    <div style="font-size:16px; font-weight:700; color:#22c55e; margin-top:5px">Healthy</div>
+                </div>
+                <div class="card" style="padding:15px; text-align:center; border: 1px solid #22c55e">
+                    <div style="font-size:12px; color:var(--muted); font-weight:600">Tomato Plant 3</div>
+                    <div style="font-size:16px; font-weight:700; color:#22c55e; margin-top:5px">Healthy</div>
+                </div>
+                <div class="card" style="padding:15px; text-align:center; border: 1px solid #22c55e">
+                    <div style="font-size:12px; color:var(--muted); font-weight:600">Tomato Plant 4</div>
+                    <div style="font-size:16px; font-weight:700; color:#22c55e; margin-top:5px">Healthy</div>
+                </div>
+                <div class="card" style="padding:15px; text-align:center; border: 1px solid #22c55e">
+                    <div style="font-size:12px; color:var(--muted); font-weight:600">Tomato Plant 5</div>
+                    <div style="font-size:16px; font-weight:700; color:#22c55e; margin-top:5px">Healthy</div>
+                </div>
+                <div class="card" style="padding:15px; text-align:center; border: 1px solid #22c55e">
+                    <div style="font-size:12px; color:var(--muted); font-weight:600">Tomato Plant 6</div>
+                    <div style="font-size:16px; font-weight:700; color:#22c55e; margin-top:5px">Healthy</div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><span class="ct">📚 Disease History Records</span></div>
+        <div class="cb">
+            <table class="tb">
+              <thead>
+                <tr>
+                  <th>TIMESTAMP</th>
+                  <th>PLANT</th>
+                  <th>DISEASE DETECTED</th>
+                  <th>CONFIDENCE</th>
+                  <th>SEVERITY</th>
+                </tr>
+              </thead>
+              <tbody id="disease-history-tbody">
+                <tr>
+                    <td colspan="5" style="text-align:center; color:var(--muted)">No history records available yet. Awaiting database connection.</td>
+                </tr>
+              </tbody>
+            </table>
+        </div>
+      </div>
+</div>

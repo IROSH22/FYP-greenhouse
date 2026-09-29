@@ -74,6 +74,10 @@
           <div id="esp-pump-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
         </div>
         <div class="card" style="padding:15px;text-align:center;">
+          <div style="font-size:12px;color:var(--muted);font-weight:600">SENSOR FERT PUMP</div>
+          <div id="esp-fpump-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
+        </div>
+        <div class="card" style="padding:15px;text-align:center;">
           <div style="font-size:12px;color:var(--muted);font-weight:600">SENSOR WINDOW</div>
           <div id="esp-win-st" style="font-size:18px;font-weight:700;margin-top:5px;color:var(--p1)">-</div>
         </div>
@@ -94,13 +98,20 @@
           <div class="ac-st off" id="act-fan-st">OFF</div>
           <div id="act-fan-mode" onclick="setMode('fan', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
         </div>
-        <div class="ac" id="act-pump-card">
-          <span class="ac-ico">💦</span>
-          <div class="ac-name">Pump Status</div>
-          <label class="tog"><input type="checkbox" id="act-pump" onchange="setAct('pump',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
-          <div class="ac-st off" id="act-pump-st">OFF</div>
-          <div id="act-pump-mode" onclick="setMode('pump', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
-        </div>
+                  <div class="ac" id="act-pump-card">
+            <span class="ac-ico">💦</span>
+            <div class="ac-name">Pump Status</div>
+            <label class="tog"><input type="checkbox" id="act-pump" onchange="setAct('pump',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+            <div class="ac-st off" id="act-pump-st">OFF</div>
+            <div id="act-pump-mode" onclick="setMode('pump', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
+          </div>
+          <div class="ac" id="act-fpump-card">
+            <span class="ac-ico">🧪</span>
+            <div class="ac-name">Fert Pump Status</div>
+            <label class="tog"><input type="checkbox" id="act-fpump" onchange="setAct('fertilizerPump',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+            <div class="ac-st off" id="act-fpump-st">OFF</div>
+            <div id="act-fpump-mode" onclick="setMode('fertilizerPump', 'AUTO')" style="font-size:11px; cursor:pointer; color:var(--p1); margin-top:4px; font-weight:600; display:none;">🔄 Reset to AUTO</div>
+          </div>
         <div class="ac" id="act-win-card">
           <span class="ac-ico">🪟</span>
           <div class="ac-name">Window Status</div>

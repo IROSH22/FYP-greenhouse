@@ -33,6 +33,7 @@ let liveData = {
   ldr: null,
   fanStatus: null,
   pumpStatus: null,
+  fertilizerPumpStatus: null,
   windowStatus: null,
   lightStatus: null,
   soil1: null,
@@ -416,7 +417,7 @@ function findDataObject(node) {
   const hasTelemetry = [
     'temperature','temp','tempc','humidity','humid','co2','smoke','ldr','light','lightlevel','lux',
     'soil1','soil2','soil3','soil4','soil5','soil6','soilSensor1','soilSensor2','soilSensor3','soilSensor4','soilSensor5','soilSensor6',
-    'fanstatus','pumpstatus','windowstatus','lightstatus','fan','pump','window','lights'
+    'fanstatus','pumpstatus','fertilizerpumpstatus','fertilizerpump','windowstatus','lightstatus','fan','pump','window','lights'
   ].some(key => lowerKeys.includes(key));
 
   if (hasTelemetry) return node;
@@ -504,46 +505,24 @@ function processLiveDataFromSnapshot(data) {
   
 liveData.fanMode = data.fanMode ?? 'AUTO';
   liveData.pumpMode = data.pumpMode ?? 'AUTO';
+  liveData.fertilizerPumpMode = data.fertilizerPumpMode ?? 'AUTO';
   liveData.windowMode = data.windowMode ?? 'AUTO';
   liveData.lightMode = data.lightMode ?? 'AUTO';
 
   liveData.espFan = parseBool(getValueByAliases(source, ['fanStatus','fan'])) ?? false;
   liveData.espPump = parseBool(getValueByAliases(source, ['pumpStatus','pump'])) ?? false;
+  liveData.espFertilizerPump = parseBool(getValueByAliases(source, ['fertilizerPumpStatus','fertilizerpump'])) ?? false;
   liveData.espWindow = parseBool(getValueByAliases(source, ['windowStatus','window'])) ?? false;
   liveData.espLight = parseBool(getValueByAliases(source, ['lightStatus','light','lights'])) ?? false;
 
-  // Handle Manual Overrides and Reject Sensor Overwrites
-  if (liveData.fanMode === 'MANUAL') {
-      if (liveData.espFan !== liveData.fanStatus && liveData.fanStatus !== null && fbDb) {
-          fbDb.ref('/greenhouse/live/fanStatus').set(liveData.fanStatus ? 'ON' : 'OFF');
-      }
-  } else {
-      liveData.fanStatus = liveData.espFan;
-  }
-
-  if (liveData.windowMode === 'MANUAL') {
-      if (liveData.espWindow !== liveData.windowStatus && liveData.windowStatus !== null && fbDb) {
-          fbDb.ref('/greenhouse/live/windowStatus').set(liveData.windowStatus ? 'ON' : 'OFF');
-      }
-  } else {
-      liveData.windowStatus = liveData.espWindow;
-  }
-
-  if (liveData.pumpMode === 'MANUAL') {
-      if (liveData.espPump !== liveData.pumpStatus && liveData.pumpStatus !== null && fbDb) {
-          fbDb.ref('/greenhouse/live/pumpStatus').set(liveData.pumpStatus ? 'ON' : 'OFF');
-      }
-  } else {
-      liveData.pumpStatus = liveData.espPump;
-  }
-
-  if (liveData.lightMode === 'MANUAL') {
-      if (liveData.espLight !== liveData.lightStatus && liveData.lightStatus !== null && fbDb) {
-          fbDb.ref('/greenhouse/live/lightStatus').set(liveData.lightStatus ? 'ON' : 'OFF');
-      }
-  } else {
-      liveData.lightStatus = liveData.espLight;
-  }
+  // Update UI with the actual status reported by the hardware/firebase.
+  // To prevent infinite flapping loops, the web app does not force its local manual state against incoming snapshots.
+  // The ESP32 hardware must respect the mode flags in Firebase to stop auto-updating.
+  liveData.fanStatus = liveData.espFan;
+  liveData.windowStatus = liveData.espWindow;
+  liveData.pumpStatus = liveData.espPump;
+  liveData.fertilizerPumpStatus = liveData.espFertilizerPump;
+  liveData.lightStatus = liveData.espLight;
 
   liveData.soil1 = parseNum(getValueByAliases(source, ['soil1','soilSensor1','soilmoisture1','moisture1'])) ?? liveData.soil1;
   liveData.soil2 = parseNum(getValueByAliases(source, ['soil2','soilSensor2','soilmoisture2','moisture2'])) ?? liveData.soil2;
@@ -611,6 +590,7 @@ liveData.fanMode = data.fanMode ?? 'AUTO';
           npk: item.npk || {},
           fanStatus: normalizeStatus(item.fanStatus, 'OFF'),
           pumpStatus: normalizeStatus(item.pumpStatus, 'OFF'),
+            fertilizerPumpStatus: normalizeStatus(item.fertilizerPumpStatus, 'OFF'),
           windowStatus: normalizeStatus(item.windowStatus, 'CLOSED'),
           lightStatus: normalizeStatus(item.lightStatus, 'OFF')
         };
@@ -753,12 +733,14 @@ function updateDashboardSensors() {
 function updateActuatorsUI() {
   applyActUI('act-fan', 'act-fan-st', 'act-fan-card', 'cf', 'cf-st', liveData.fanStatus, 'ON', 'OFF', liveData.fanMode, 'act-fan-mode', 'cf-mode');
   applyActUI('act-pump', 'act-pump-st', 'act-pump-card', null, null, liveData.pumpStatus, 'ON', 'OFF', liveData.pumpMode, 'act-pump-mode', 'cp-mode');
+  applyActUI('act-fpump', 'act-fpump-st', 'act-fpump-card', 'act-ctrl-fpump', 'act-ctrl-fpump-st', liveData.fertilizerPumpStatus, 'ON', 'OFF', liveData.fertilizerPumpMode, 'act-fpump-mode', 'cfp-mode');
   applyActUI('act-win', 'act-win-st', 'act-win-card', 'cw', 'cw-st', liveData.windowStatus, 'OPEN', 'CLOSED', liveData.windowMode, 'act-win-mode', 'cw-mode');
   applyActUI('act-light', 'act-light-st', 'act-light-card', 'cl', 'cl-st', liveData.lightStatus, 'ON', 'OFF', liveData.lightMode, 'act-light-mode', 'cl-mode');
   
   // Update new Sensor Output block
   setEl('esp-fan-st', liveData.espFan ? 'ON' : 'OFF');
   setEl('esp-pump-st', liveData.espPump ? 'ON' : 'OFF');
+  setEl('esp-fpump-st', liveData.espFertilizerPump ? 'ON' : 'OFF');
   setEl('esp-win-st', liveData.espWindow ? 'OPEN' : 'CLOSED');
   setEl('esp-light-st', liveData.espLight ? 'ON' : 'OFF');
 }
@@ -807,6 +789,7 @@ function triggerHistorySnapshot() {
     npk: liveData.npk || {},
     fanStatus: liveData.fanStatus ? 'ON' : 'OFF',
     pumpStatus: liveData.pumpStatus ? 'ON' : 'OFF',
+      fertilizerPumpStatus: liveData.fertilizerPumpStatus ? 'ON' : 'OFF',
     windowStatus: liveData.windowStatus ? 'OPEN' : 'CLOSED',
     lightStatus: liveData.lightStatus ? 'ON' : 'OFF',
     soil1: liveData.soil1,
@@ -926,6 +909,7 @@ function renderAnalyticsPage() {
       const timeLabel = r.timestamp || r.timeString || '—';
       const fanStatus = normalizeStatus(r.fanStatus, 'OFF');
       const pumpStatus = normalizeStatus(r.pumpStatus, 'OFF');
+        const fertilizerPumpStatus = normalizeStatus(r.fertilizerPumpStatus, 'OFF');
       const windowStatus = normalizeStatus(r.windowStatus, 'CLOSED');
       return `<tr>
         <td style="font-size:11px"><b>${timeLabel}</b></td>
@@ -991,12 +975,12 @@ function renderHistoryCharts() {
       data: {
         labels: labels,
         datasets: [
-          { label: 'Soil 1 (Tomato)', data: rev.map(r=>parseNum(r.soil1)), borderColor: '#22c55e' },
-          { label: 'Soil 2 (Pepper)', data: rev.map(r=>parseNum(r.soil2)), borderColor: '#f59e0b' },
-          { label: 'Soil 3 (Basil)', data: rev.map(r=>parseNum(r.soil3)), borderColor: '#3b82f6' },
-          { label: 'Soil 4 (Lettuce)', data: rev.map(r=>parseNum(r.soil4)), borderColor: '#ef4444' },
-          { label: 'Soil 5 (Cucumber)', data: rev.map(r=>parseNum(r.soil5)), borderColor: '#8b5cf6' },
-          { label: 'Soil 6 (Spinach)', data: rev.map(r=>parseNum(r.soil6)), borderColor: '#10b981' }
+          { label: 'Tomato Plant 1', data: rev.map(r=>parseNum(r.soil1)), borderColor: '#22c55e' },
+          { label: 'Tomato Plant 2', data: rev.map(r=>parseNum(r.soil2)), borderColor: '#f59e0b' },
+          { label: 'Tomato Plant 3', data: rev.map(r=>parseNum(r.soil3)), borderColor: '#3b82f6' },
+          { label: 'Tomato Plant 4', data: rev.map(r=>parseNum(r.soil4)), borderColor: '#ef4444' },
+          { label: 'Tomato Plant 5', data: rev.map(r=>parseNum(r.soil5)), borderColor: '#8b5cf6' },
+          { label: 'Tomato Plant 6', data: rev.map(r=>parseNum(r.soil6)), borderColor: '#10b981' }
         ]
       },
       options: { responsive: true, maintainAspectRatio: false }
@@ -1023,9 +1007,10 @@ function renderHistoryCharts() {
 }
 
 function exportHistoryCSV() {
-  let csv = 'Timestamp,Temperature_C,Humidity_Pct,CO2_ppm,Smoke_ppm,LDR_lux,Soil1,Soil2,Soil3,Soil4,Soil5,Soil6,NPK_N,NPK_P,NPK_K,Fan,Pump,Window\n';
+  let csv = 'Timestamp,Temperature_C,Humidity_Pct,CO2_ppm,Smoke_ppm,LDR_lux,Soil1,Soil2,Soil3,Soil4,Soil5,Soil6,NPK_N,NPK_P,NPK_K,Fan,Pump,Fert_Pump,Window\n';
   historyRecords.forEach(r => {
-    csv += `"${r.timestamp}",${r.temperature},${r.humidity},${r.co2},${r.smoke},${r.ldr},${r.soil1},${r.soil2},${r.soil3},${r.soil4},${r.soil5},${r.soil6},${r.npk_n},${r.npk_p},${r.npk_k},${r.fanStatus},${r.pumpStatus},${r.windowStatus}\n`;
+    csv += `"${r.timestamp}",${r.temperature},${r.humidity},${r.co2},${r.smoke},${r.ldr},${r.soil1},${r.soil2},${r.soil3},${r.soil4},${r.soil5},${r.soil6},${r.npk_n},${r.npk_p},${r.npk_k},${r.fanStatus},${r.pumpStatus},${r.fertilizerPumpStatus},${r.windowStatus}
+`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = URL.createObjectURL(blob);
@@ -1124,7 +1109,7 @@ function pumpPlant(id) {
 function setAct(type, el) {
   const val = el.checked;
   const firebaseKey = type === 'window' ? 'windowStatus' : (type === 'light' || type === 'lights') ? 'lightStatus' : type + 'Status';
-  const modeKey = (type === 'lights' ? 'light' : type) + 'Mode';
+  const modeKey = (type === 'lights' ? 'light' : type === 'fertilizerPump' ? 'fertilizerPump' : type) + 'Mode';
 
   liveData[firebaseKey] = val;
   liveData[modeKey] = 'MANUAL';
@@ -1391,7 +1376,9 @@ function buildTreeHTML(obj, depth) {
   if (typeof obj === 'object') {
     const indent = '  '.repeat(depth);
     const lines = Object.entries(obj).map(([k, v]) => `${indent}  <span style="color:#81c784;font-weight:700">"${k}"</span>: ${buildTreeHTML(v, depth+1)}`);
-    return `{\n${lines.join(',\n')}\n${indent}}`;
+    return `{
+${lines.join(',\n')}
+${indent}}`;
   }
   return String(obj);
 }
@@ -1460,7 +1447,7 @@ function waterAll() {
 }
 
 function eStop() {
-  liveData.fanStatus = false; liveData.pumpStatus = false; liveData.windowStatus = false; liveData.lightStatus = false;
+  liveData.fanStatus = false; liveData.pumpStatus = false; liveData.fertilizerPumpStatus = false; liveData.windowStatus = false; liveData.lightStatus = false;
   updateActuatorsUI();
   addCtrlLog('🛑 EMERGENCY STOP ALL ACTUATORS');
   toast('🛑 Emergency Stop Activated! All relays OFF', 'error');
@@ -1510,7 +1497,7 @@ async function go(page) {
   } else if (page === 'analytics') {
     title.textContent = 'Analytics & Trends';
     sub.textContent = 'Historical data and graphical analysis';
-    if(typeof renderHistoryCharts === 'function') renderHistoryCharts();
+    if(typeof renderAnalyticsPage === 'function') renderAnalyticsPage();
   } else if (page === 'database') {
     title.textContent = 'Database Snapshot';
     sub.textContent = 'Raw Firebase JSON tree view';
