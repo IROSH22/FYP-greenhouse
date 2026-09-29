@@ -1,0 +1,45 @@
+
+let _plantFilter = '', _plantStat = '';
+function updatePlantGrid() {
+  plants = [];
+  for (let i = 1; i <= 6; i++) {
+    const v = liveData[`soil${i}`];
+    if (v === null) {
+      plants.push({ id: i, ...plantMeta[i-1], moisture: null, status: 'waiting', health: 'waiting' });
+    } else {
+      const status = v < 30 ? 'dry' : v > 70 ? 'wet' : 'ok';
+      const health = v < 20 ? 'critical' : v < 30 ? 'warning' : 'healthy';
+      plants.push({ id: i, ...plantMeta[i-1], moisture: v, status, health });
+    }
+  }
+
+  const grid = document.getElementById('plant-grid');
+  if (!grid) return;
+
+  const filtered = plants.filter(p => {
+    const nm = !_plantFilter || p.name.toLowerCase().includes(_plantFilter.toLowerCase());
+    const st = !_plantStat || p.status === _plantStat;
+    return nm && st;
+  });
+
+  grid.innerHTML = filtered.map(p => {
+    if (p.moisture === null) {
+      return `
+        <div class="pc" style="opacity:0.6">
+          <div class="pc-hd"><div class="pc-id">${p.id}</div><span>⏳</span></div>
+          <div class="pc-name">${p.name}</div>
+          <div class="pc-type">${p.type} · ${p.variety}</div>
+          <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:6px">
+            <span style="color:var(--muted)">Soil Moisture Sensor ${p.id}</span><b>—</b>
+          </div>
+          <div class="mbar"><div class="mfill ok" style="width:0%"></div></div>
+          <div style="display:flex;align-items:center;justify-content:center">
+            <span style="font-size:10px;color:var(--muted)">⏳ Waiting for data...</span>
+          </div>
+        </div>`;
+    }
+    const hi = p.health === 'healthy' ? '🟢' : p.health === 'warning' ? '🟡' : '🔴';
+    return `
+      <div class="pc" onclick="toast('Plant ${p.id} Details: ${p.name}','info')">
+        <div class="pc-hd"><div class="pc-id">${p.id}</div><span>${hi}</span></div>
+        <div class="pc-name">${p.name}</div>

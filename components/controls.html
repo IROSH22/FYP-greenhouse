@@ -22,7 +22,16 @@
                 <button class="btn p" style="padding:6px 12px;font-size:11px" onclick="runPump()">Run Pulse</button>
               </div>
             </div>
-            <div style="padding:14px;background:#fee2e2;border-radius:10px;border:1px solid #fca5a5;display:flex;align-items:center;justify-content:space-between">
+            
+              <div style="padding:14px;background:var(--bg);border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+                <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">??</span><div><div style="font-size:13.5px;font-weight:700">Fertilizer Pump Relay</div><div style="font-size:11px;color:var(--muted)">Nutrient Supply</div></div></div>
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div id="cfp-mode" onclick="setMode('fertilizerPump', 'AUTO')" style="display:none;font-size:11px;color:var(--p1);cursor:pointer;margin-right:10px;font-weight:600">Reset AUTO</div>
+                  <span class="ac-st" id="act-ctrl-fpump-st">--</span>
+                  <label class="tog"><input type="checkbox" id="act-ctrl-fpump" onchange="setAct('fertilizerPump',this)"><div class="tog-t"><div class="tog-k"></div></div></label>
+                </div>
+              </div>
+              <div style="padding:14px;background:#fee2e2;border-radius:10px;border:1px solid #fca5a5;display:flex;align-items:center;justify-content:space-between">
               <div style="display:flex;align-items:center;gap:12px"><span style="font-size:24px">🔊</span><div><div style="font-size:13.5px;font-weight:700;color:#991b1b">Emergency Alarm Buzzer (Pin 46)</div><div style="font-size:11px;color:#7f1d1d">Triggers automatically on Smoke > 700 ppm</div></div></div>
               <div style="display:flex;gap:8px"><button class="btn s" style="padding:5px 10px;font-size:11px" onclick="toast('Buzzer test signal sent','warning')">Test</button><button class="btn d" style="padding:5px 10px;font-size:11px" onclick="toast('Buzzer silenced','info')">Silence</button></div>
             </div>
